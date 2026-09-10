@@ -81,3 +81,7 @@ Reference content is a starting point, not legal or grant advice.
 ## Stack
 
 Express and better-sqlite3 on the back end, React and Vite on the front end, npm workspaces, node:test for the API suite. No auth. It is a single hospital tool meant to run on one machine or one private Codespace. Put it behind your own login before exposing it to the internet.
+
+## Shareable single file version
+
+`standalone/rhtp-navigator.html` is the same tool in one HTML file with no server. Data is saved in the browser that opens it, with JSON export and import for backups. It is published as a hosted page for sharing by link; open the file directly in a browser to run it locally. It stores document links rather than uploaded files.

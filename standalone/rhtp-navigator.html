@@ -1,0 +1,608 @@
+<title>RHTP Navigator</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#F5F7F5;--surface:#FFFFFF;--surface2:#ECF0ED;--line:#D5DCD7;--ink:#1B2420;--muted:#5F6B66;
+  --accent:#1E6B5C;--accent-ink:#FFFFFF;--accent-soft:#DCEDE7;
+  --good:#2C7A4B;--good-soft:#DDF0E3;--warn:#9A6A12;--warn-soft:#F7ECD2;--bad:#B23F2E;--bad-soft:#F6DEDA;--info-soft:#E1E9F2;--info:#2F5C86;
+  --shadow:0 1px 2px rgba(20,30,26,.06),0 4px 14px rgba(20,30,26,.05);
+  --sans:"Public Sans",system-ui,-apple-system,"Segoe UI",Helvetica,Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#131917;--surface:#1B2320;--surface2:#232C28;--line:#31403A;--ink:#E6ECE8;--muted:#98A6A0;
+  --accent:#5FB9A3;--accent-ink:#0F1A17;--accent-soft:#1E332D;
+  --good:#6CC28C;--good-soft:#1C3325;--warn:#E0B054;--warn-soft:#3A2E14;--bad:#EF8A78;--bad-soft:#3E211C;--info-soft:#1F2E3C;--info:#8FBBE3;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --bg:#131917;--surface:#1B2320;--surface2:#232C28;--line:#31403A;--ink:#E6ECE8;--muted:#98A6A0;
+  --accent:#5FB9A3;--accent-ink:#0F1A17;--accent-soft:#1E332D;
+  --good:#6CC28C;--good-soft:#1C3325;--warn:#E0B054;--warn-soft:#3A2E14;--bad:#EF8A78;--bad-soft:#3E211C;--info-soft:#1F2E3C;--info:#8FBBE3;
+  --shadow:0 1px 2px rgba(0,0,0,.4),0 4px 14px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14.5px;line-height:1.5}
+a{color:var(--accent)}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.2}
+h1{font-size:1.55rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.1rem;font-weight:600}
+h3{font-size:.95rem;font-weight:600}
+p{margin:0}
+.shell{display:grid;grid-template-columns:220px 1fr;min-height:100vh}
+nav.rail{background:var(--surface);border-right:1px solid var(--line);padding:22px 14px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.brand{padding:0 8px 16px}
+.brand strong{display:block;font-size:1.05rem;letter-spacing:-.01em}
+.brand span{display:block;font-size:.78rem;color:var(--muted);margin-top:2px}
+nav.rail button{all:unset;display:flex;align-items:center;justify-content:space-between;padding:8px 10px;border-radius:6px;cursor:pointer;color:var(--ink);font-weight:500;font-size:.92rem}
+nav.rail button:hover{background:var(--surface2)}
+nav.rail button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+nav.rail button:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+nav.rail .count{font-family:var(--mono);font-size:.72rem;color:var(--muted);font-weight:400}
+nav.rail .foot{margin-top:auto;font-size:.76rem;color:var(--muted);padding:12px 8px 0;border-top:1px solid var(--line);display:grid;gap:6px}
+main{padding:28px clamp(16px,3vw,40px) 60px;max-width:1240px;width:100%}
+.head{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap;margin-bottom:18px}
+.head p{color:var(--muted);max-width:66ch;margin-top:4px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{font:inherit;font-weight:500;font-size:.88rem;padding:7px 13px;border-radius:6px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.sm{padding:3px 8px;font-size:.8rem}
+.btn.danger{color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:default}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:18px 20px;box-shadow:var(--shadow)}
+.card+.card{margin-top:14px}
+.card-head{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.grid{display:grid;gap:14px}
+.cols-2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.cols-4{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.stat .lbl{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600}
+.stat .val{font-family:var(--mono);font-size:1.6rem;font-weight:500;margin-top:4px;font-variant-numeric:tabular-nums}
+.stat .sub{font-size:.8rem;color:var(--muted);margin-top:2px}
+.alert{padding:10px 14px;border-radius:6px;font-size:.9rem;margin-bottom:10px;border:1px solid transparent}
+.alert.danger{background:var(--bad-soft);color:var(--bad)}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.info{background:var(--info-soft);color:var(--info)}
+.alert.good{background:var(--good-soft);color:var(--good)}
+.badge{display:inline-block;font-size:.72rem;font-weight:600;padding:2px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);white-space:nowrap;letter-spacing:.02em}
+.badge.green{background:var(--good-soft);color:var(--good)}
+.badge.amber{background:var(--warn-soft);color:var(--warn)}
+.badge.red{background:var(--bad-soft);color:var(--bad)}
+.badge.blue{background:var(--accent-soft);color:var(--accent)}
+.bar{height:7px;background:var(--surface2);border-radius:999px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:999px;transition:width .25s}
+.bar.green i{background:var(--good)}
+.tabs{display:flex;gap:2px;border-bottom:1px solid var(--line);margin-bottom:12px;overflow-x:auto}
+.tabs button{all:unset;padding:8px 14px;cursor:pointer;color:var(--muted);font-weight:500;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
+.tabs button.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+.muted{color:var(--muted)}.small{font-size:.82rem}
+.form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px 16px}
+.field{display:grid;gap:4px}
+.field>span{font-size:.8rem;font-weight:600;color:var(--muted)}
+.field .help{font-weight:400;font-size:.76rem}
+.span2{grid-column:span 2}
+@media (max-width:560px){.span2{grid-column:span 1}}
+input,select,textarea{font:inherit;font-size:.92rem;padding:7px 10px;border:1px solid var(--line);border-radius:6px;background:var(--surface);color:var(--ink);width:100%}
+input[type=number],.num input{font-family:var(--mono);font-variant-numeric:tabular-nums}
+textarea{min-height:88px;resize:vertical;line-height:1.5}
+input.inline,select.inline{padding:4px 7px;font-size:.84rem;width:auto}
+input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);margin:0}
+table{width:100%;border-collapse:collapse;font-size:.88rem}
+th{text-align:left;font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);padding:6px 8px;border-bottom:1px solid var(--line);font-weight:600}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.total td{font-weight:600;border-top:2px solid var(--ink)}
+.wrap{overflow-x:auto}
+.cat{font-size:.72rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);font-weight:600;margin:16px 0 6px}
+.cat:first-child{margin-top:0}
+.row{display:grid;grid-template-columns:auto 1fr auto auto auto auto;gap:10px;align-items:start;padding:9px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .t{font-weight:600}.row .d{font-size:.82rem;color:var(--muted);margin-top:2px;max-width:62ch}
+.row.done .t{text-decoration:line-through;color:var(--muted)}
+@media (max-width:820px){.row{grid-template-columns:auto 1fr;}.row>*:nth-child(n+3){grid-column:2}}
+.split{display:grid;grid-template-columns:270px 1fr;gap:14px}
+@media (max-width:860px){.split{grid-template-columns:1fr}}
+.seclist button{all:unset;display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;padding:8px 10px;border-radius:6px;cursor:pointer;font-size:.9rem}
+.seclist button:hover{background:var(--surface2)}
+.seclist button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.editor textarea{min-height:440px;font-size:.95rem;line-height:1.6}
+.ph{color:var(--warn)}
+ul.list{list-style:none;margin:0;padding:0}
+ul.list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);align-items:center}
+ul.list li:last-child{border-bottom:0}
+.toast{position:fixed;bottom:18px;right:18px;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:6px;font-size:.88rem;box-shadow:var(--shadow);z-index:50;opacity:0;transition:opacity .2s}
+.toast.show{opacity:1}
+.question{display:grid;gap:4px;margin-bottom:16px}
+.question .q{font-weight:500}
+.question .h{font-size:.78rem;color:var(--muted)}
+@media (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  nav.rail{position:sticky;height:auto;flex-direction:row;flex-wrap:wrap;padding:10px 12px;gap:2px;z-index:10;border-right:0;border-bottom:1px solid var(--line)}
+  .brand{width:100%;padding:4px 6px 8px}
+  nav.rail button{padding:6px 9px;font-size:.84rem}
+  nav.rail .count,nav.rail .foot{display:none}
+  main{padding-top:18px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="shell">
+  <nav class="rail" id="nav"></nav>
+  <main id="main"></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ---------- reference data (statute: Section 71401 of P.L. 119-21) ----------
+const USES=[
+['A','Prevention and chronic disease management','Promoting evidence-based, measurable interventions to improve prevention and chronic disease management.','Diabetes and hypertension programs, remote patient monitoring, community health worker outreach, screening campaigns.'],
+['B','Provider payments','Providing payments to health care providers for the provision of health care items or services, as specified by the CMS Administrator.','Stabilization payments tied to service delivery. Reported cap: no more than 20 percent of a state award (verify with NOFO).'],
+['C','Consumer-facing technology','Promoting consumer-facing, technology-driven solutions for the prevention and management of chronic diseases.','Patient portals, mobile health apps, digital care navigation, remote monitoring devices for patients.'],
+['D','Training and technical assistance','Providing training and technical assistance for the development and adoption of technology-enabled solutions that improve care delivery in rural hospitals.','Telehealth training, EHR optimization support, data analytics capability building.'],
+['E','Workforce recruitment and retention','Recruiting and retaining clinical workforce talent to rural areas, with commitments to serve rural communities for a minimum of 5 years.','Loan repayment, sign-on and retention bonuses, residency and rotation partnerships, housing support tied to 5-year service commitments.'],
+['F','Health IT and cybersecurity','Providing technical assistance, software, and hardware for significant information technology advances designed to improve efficiency, enhance cybersecurity capability development, and improve patient health outcomes.','EHR upgrades, interoperability, cybersecurity assessments and controls, network hardware.'],
+['G','Right-sizing service lines','Assisting rural communities to right-size their health care delivery systems by identifying needed preventative, ambulatory, pre-hospital, emergency, acute inpatient care, outpatient care, and post-acute care service lines.','Service line assessments, conversion planning (for example Rural Emergency Hospital), regional care coordination.'],
+['H','Behavioral health and substance use','Supporting access to opioid use disorder treatment services, other substance use disorder treatment services, and mental health services.','MAT programs, tele-behavioral health, crisis stabilization, integrated behavioral health in primary care.'],
+['I','Innovative care and payment models','Developing projects that support innovative models of care that include value-based care arrangements and alternative payment models, as appropriate.','Global budget pilots, ACO participation, care management infrastructure.'],
+['J','Other sustainable access activities','Additional uses designed to promote sustainable access to high quality rural health care services, as determined by the CMS Administrator.','Capital and facility improvements (reported cap on capital expenditures, verify with NOFO), EMS partnerships, transportation.']];
+const FACTS=[
+['Program basics','Authority','Section 71401 of P.L. 119-21 (One Big Beautiful Bill Act, signed July 4, 2025), adding Section 2118 to the Social Security Act.','Statute'],
+['Program basics','Total funding','$50 billion over five federal fiscal years, $10 billion per year, FY2026 through FY2030.','Statute'],
+['Program basics','Administered by','Centers for Medicare and Medicaid Services (CMS). Only states could apply; providers receive funds through their state.','Statute, CMS NOFO'],
+['Program basics','Allocation formula','Half of each year is split equally among approved states. The other half is scored on rural population, rural facility share, and the state plan (policy and technical scoring).','Statute, CMS NOFO'],
+['Program basics','First-year awards','All 50 states were approved on December 29, 2025. First-year awards ranged from about $147 million (New Jersey) to about $281 million (Texas), averaging about $200 million per state.','CMS announcement, AHA, KFF'],
+['Key dates','State application deadline','November 5, 2025 (one-time state application).','CMS NOFO'],
+['Key dates','Awards announced','December 29, 2025.','CMS'],
+['Key dates','State spending plans due','January 30, 2026, with CMS approval expected by late February 2026 before funds could transfer.','CMS, MultiState'],
+['Key dates','First funds released','The first $10 billion was released to states in summer 2026 for distribution to providers.','HFMA'],
+['Key dates','Program end','Funds are available through FY2030. Unobligated funds may be redistributed or returned; check your state agreement for deadlines.','Statute'],
+['Guardrails','Minimum uses','Each state must use funds for at least three of the ten approved uses (A through J).','Statute'],
+['Guardrails','Administrative cap','No more than 10 percent of a state award may go to administrative expenses. States may pass a share of that cap on to providers; ask your state.','Statute'],
+['Guardrails','Provider payment cap (verify)','Reported cap of 20 percent of a state award on direct provider payments (use B). Verify against the NOFO.','CMS NOFO (reported)'],
+['Guardrails','Capital expenditure cap (verify)','Reported cap of 20 percent of a state award on capital expenditures and construction. Verify against the NOFO.','CMS NOFO (reported)'],
+['Guardrails','Supplement, not supplant','Funds are generally expected to supplement existing federal and state funding rather than replace it. Document how each project adds new capacity.','CMS NOFO'],
+['For hospitals','How hospitals get money','Hospitals do not apply to CMS. Each state runs its own sub-award or contracting process under its approved plan. Watch your state lead agency and hospital association.','HFMA'],
+['For hospitals','What small hospitals struggle with','Independent rural hospitals without grant writers reported the state paperwork was more complicated than expected and technical support was thinner than hoped. Associations are adding admin help for year two.','HFMA'],
+['For hospitals','Typical state asks','Facility profile, community need statement, project description tied to use categories, budget with justification, measurable outcomes, sustainability plan, signed assurances, UEI and SAM registration.','Common state sub-award requirements']];
+const STATES=[['AL','Alabama'],['AK','Alaska'],['AZ','Arizona'],['AR','Arkansas'],['CA','California'],['CO','Colorado'],['CT','Connecticut'],['DE','Delaware'],['FL','Florida'],['GA','Georgia'],['HI','Hawaii'],['ID','Idaho'],['IL','Illinois'],['IN','Indiana'],['IA','Iowa'],['KS','Kansas'],['KY','Kentucky'],['LA','Louisiana'],['ME','Maine'],['MD','Maryland'],['MA','Massachusetts'],['MI','Michigan'],['MN','Minnesota'],['MS','Mississippi'],['MO','Missouri'],['MT','Montana'],['NE','Nebraska'],['NV','Nevada'],['NH','New Hampshire'],['NJ','New Jersey'],['NM','New Mexico'],['NY','New York'],['NC','North Carolina'],['ND','North Dakota'],['OH','Ohio'],['OK','Oklahoma'],['OR','Oregon'],['PA','Pennsylvania'],['RI','Rhode Island'],['SC','South Carolina'],['SD','South Dakota'],['TN','Tennessee'],['TX','Texas'],['UT','Utah'],['VT','Vermont'],['VA','Virginia'],['WA','Washington'],['WV','West Virginia'],['WI','Wisconsin'],['WY','Wyoming']];
+const KNOWN_AWARDS={TX:281000000,NJ:147000000};
+const CHECKLIST=[
+['application','Registration','Confirm UEI and active SAM.gov registration','Most states require an active SAM.gov registration and UEI for any sub-award. Renewals take weeks, so check the expiration date now.',1],
+['application','Registration','Register in the state grant portal','Create the organizational account in your state lead agency portal and confirm who holds the login.',1],
+['application','Registration','Identify state lead agency and program contact','Record the agency, program manager, email, and any office hours or TA sessions the state offers.',1],
+['application','Governance','Board resolution or CEO authorization to apply','Some states ask for a signed authorization. Get it on the next board agenda even if not required yet.',0],
+['application','Governance','Designate project director and financial contact','Name one accountable owner for the application and one for money. Small teams can be the same person, but write it down.',1],
+['application','Facility profile','Facility profile completed','Name, CCN, facility type (CAH, REH, SCH, PPS), beds, county, service area, rural designation source.',1],
+['application','Facility profile','Rural eligibility documentation','Evidence of rural status (FORHP eligible ZIP, CAH status, RUCA, or state definition).',1],
+['application','Facility profile','Most recent audited financial statements','States often ask for the last one or two years of audited financials to assess capacity and need.',1],
+['application','Facility profile','Most recent Medicare cost report (summary)','Have the worksheet S and G summaries ready for the financial need section.',0],
+['application','Need','Community need statement drafted','Use the Narrative tab. Pull from your CHNA, county health rankings, and internal volume and payer data.',1],
+['application','Need','Community Health Needs Assessment on file','Attach or cite your most recent CHNA. States score alignment between the CHNA and the proposed project.',1],
+['application','Project','Select use-of-funds categories','Pick the statutory categories (A through J) the project maps to. States usually require the project to match their approved plan.',1],
+['application','Project','Project description drafted','Use the Narrative tab. Describe the activities, who is served, and how it fits the state plan.',1],
+['application','Project','Measurable outcomes and metrics defined','Each activity needs a baseline, a target, and a data source you can actually report on.',1],
+['application','Project','Work plan with timeline','Quarter-by-quarter milestones for the award period. Copy these into the Compliance tab once awarded.',1],
+['application','Budget','Budget worksheet completed','Use the Budget tab. Every line needs a justification and a use category.',1],
+['application','Budget','Budget within state caps','Check administrative, provider payment, and capital caps your state passes down. Record the state limits in the Program tab.',1],
+['application','Budget','Vendor quotes for equipment and IT','States commonly require quotes for equipment over a threshold. Get two where you can.',0],
+['application','Partners','Letters of support or partnership agreements','From EMS, FQHCs, public health, behavioral health providers, or a regional system you will coordinate with.',0],
+['application','Partners','Workforce commitment documentation','If using category E, draft the 5-year service commitment language and the repayment terms for recruits.',0],
+['application','Assurances','Signed assurances and certifications','Federal and state assurances (non-discrimination, lobbying, debarment, supplement not supplant).',1],
+['application','Assurances','Conflict of interest and indirect cost documentation','Provide your negotiated indirect rate or elect the de minimis rate. Include the conflict of interest policy if requested.',0],
+['application','Submission','Internal review of the full packet','Have someone who did not write it read the full packet against the state checklist.',1],
+['application','Submission','Submit in the state portal and save confirmation','Save the confirmation number and a PDF of what was submitted in the Documents area.',1],
+['award','Award setup','Award letter and sub-award agreement received','Store the executed agreement. Record award amount, period, and reporting schedule in the Profile tab.',1],
+['award','Award setup','Reporting schedule entered in the Compliance tab','Enter every progress, financial, and performance report due date the agreement lists.',1],
+['award','Award setup','Separate GL accounts or cost center created','Track RHTP revenue and expense separately so drawdowns reconcile cleanly.',1],
+['award','Award setup','Written procurement and allowable cost procedures','Confirm your procurement policy meets 2 CFR 200 thresholds if the state applies them.',1],
+['award','Award setup','Milestones loaded from the work plan','Move the work plan milestones into the Compliance tab with owners and target dates.',1],
+['award','Award setup','Drawdown method and cash management confirmed','Reimbursement vs advance, how often you can request, and what backup is required.',1],
+['reporting','Ongoing','Monthly reconciliation of RHTP ledger to GL','Reconcile the Fund ledger to your general ledger monthly and keep the reconciliation.',1],
+['reporting','Ongoing','Metric data collection running','Confirm each outcome metric has a report or query that produces the number on schedule.',1],
+['reporting','Ongoing','Equipment inventory tagged and listed','Federal funds usually require an inventory of equipment over a threshold with location and condition.',0],
+['reporting','Ongoing','Time and effort documentation for funded staff','Personnel charged to the award need documented effort supporting the allocation.',1],
+['reporting','Closeout','Single audit threshold check','If total federal expenditures exceed the single audit threshold in a fiscal year, plan for the audit.',1],
+['reporting','Closeout','Closeout report and final financial reconciliation','Final performance and financial reports, equipment disposition, and record retention plan.',1]];
+const QUESTIONS=[
+['service_area','need','Describe the community and service area you serve.','Counties or ZIPs, population, distance to the next hospital, notable demographics (age, poverty, uninsured, Medicaid share).','textarea'],
+['health_challenges','need','What are the biggest health problems in your service area?','Use your CHNA and county health rankings. Chronic disease rates, behavioral health, substance use, maternal care, EMS response times.','textarea'],
+['access_gaps','need','What services are missing, at risk, or hard to reach?','Service lines closed or reduced, specialties with no local access, wait times, transportation barriers.','textarea'],
+['financial_pressure','need','What financial pressures is the hospital facing?','Operating margin, days cash on hand, payer mix, uncompensated care, recent losses. This supports the need case.','textarea'],
+['project_name','project','Give the project a short name.','Example: Rural Chronic Care and Telehealth Expansion.','text'],
+['project_summary','project','In plain words, what do you want to do with the money?','One or two paragraphs. Do not worry about grant language, the drafter will shape it.','textarea'],
+['activities','project','List the specific activities or purchases.','One per line. Example: Hire two care managers. Buy 150 remote monitoring kits. Upgrade EHR to support telehealth.','textarea'],
+['people_served','project','Who is served and roughly how many people per year?','Patients, residents, or providers. Give a number even if it is an estimate.','textarea'],
+['workforce_plan','workforce','What workforce positions will you recruit, retain, or train?','Roles, counts, how you will recruit, and how you will secure a 5-year rural commitment if using category E.','textarea'],
+['technology_plan','technology','What technology or cybersecurity improvements are included?','Systems, vendors if known, what problem each fixes, and how it improves efficiency or outcomes.','textarea'],
+['outcomes','outcomes','What will be different in 1 year and in 5 years? Give numbers.','Example: Reduce ED visits for CHF patients by 20 percent. Recruit 3 providers. Cut 30-day readmissions from 14 to 11 percent.','textarea'],
+['data_sources','outcomes','Where will the outcome numbers come from?','EHR reports, claims, patient surveys, HR records, state data.','textarea'],
+['partners','partnerships','Who are your partners and what does each one do?','EMS, FQHCs, public health, behavioral health, schools, a regional system, the state office of rural health.','textarea'],
+['sustainability','sustainability','How does this continue after the grant money ends?','New revenue, cost savings, payer contracts, ongoing partner support, absorbed into operations.','textarea'],
+['capacity','capacity','Who will manage the project and the money?','Names and roles. Past grant experience. Financial controls and audit history.','textarea'],
+['risks','capacity','What could go wrong and what is the backup plan?','Recruiting delays, vendor timelines, construction, staff turnover.','textarea']];
+const SECTIONS=[
+['need','Statement of Need','Describe the community, the health problems, the access gaps, and the financial pressure. Tie every claim to a source (CHNA, county health rankings, your own data).',750],
+['project','Project Description','What you will do, for whom, and which use-of-funds categories it maps to. Be concrete about activities and counts.',1000],
+['workforce','Workforce Plan','Recruitment, retention, training, and the 5-year rural service commitment if category E applies.',500],
+['technology','Technology and Cybersecurity','Systems, what problem each solves, and how efficiency, cybersecurity, or outcomes improve.',500],
+['outcomes','Outcomes and Evaluation','Baseline, targets, timeline, and data sources for each metric.',600],
+['partnerships','Partnerships and Coordination','Who you work with and what each partner contributes.',400],
+['sustainability','Sustainability Plan','How the work continues after the award period.',400],
+['capacity','Organizational Capacity and Risk','Who runs it, financial controls, past performance, and risk mitigation.',500],
+['budget_narrative','Budget Justification','Generated from the Budget tab. Explains each cost category and why it is reasonable and necessary.',800]];
+const DEFAULT_REPORTS=[['Quarterly progress report, Q1','progress',90],['Quarterly financial report, Q1','financial',90],['Quarterly progress report, Q2','progress',180],['Quarterly financial report, Q2','financial',180],['Quarterly progress report, Q3','progress',270],['Quarterly financial report, Q3','financial',270],['Annual performance report, Year 1','performance',365],['Annual financial report, Year 1','financial',365]];
+const FACILITY=[['CAH','Critical Access Hospital'],['REH','Rural Emergency Hospital'],['SCH','Sole Community Hospital'],['RRC','Rural Referral Center'],['MDH','Medicare Dependent Hospital'],['PPS','Rural PPS hospital'],['RHC','Rural Health Clinic'],['FQHC','FQHC'],['OTHER','Other rural provider']];
+const TYPE_LABEL={CAH:'Critical Access Hospital',REH:'Rural Emergency Hospital',SCH:'Sole Community Hospital',RRC:'Rural Referral Center',MDH:'Medicare Dependent Hospital',PPS:'rural prospective payment hospital',RHC:'Rural Health Clinic',FQHC:'Federally Qualified Health Center',OTHER:'rural provider'};
+const COST_TYPES=['personnel','fringe','equipment','supplies','contractual','construction','travel','indirect','provider_payment','other'];
+const YEARS=[1,2,3,4,5];
+const STATUS_TONE={not_started:'',in_progress:'blue',blocked:'red',complete:'green',na:'',planned:'',at_risk:'amber',upcoming:'',submitted:'blue',accepted:'green',late:'red',empty:'',draft:'blue',review:'amber',final:'green'};
+
+// ---------- state ----------
+const KEY='rhtp-navigator-v1';
+const blankHospital=()=>({name:'',ccn:'',state:'',county:'',facility_type:'CAH',licensed_beds:0,service_area_population:0,contact_name:'',contact_title:'',contact_email:'',contact_phone:'',fiscal_year_end:'',uei:'',sam_expiration:'',requested_amount:0,awarded_amount:0,award_date:'',project_start:'',project_end:'',notes:''});
+function freshState(){
+  return {
+    version:1,sample:false,hospital:blankHospital(),
+    checklist:CHECKLIST.map((c,i)=>({id:i+1,phase:c[0],category:c[1],title:c[2],description:c[3],is_required:c[4],status:'not_started',owner:'',due_date:'',evidence_link:'',notes:''})),
+    answers:{},sections:Object.fromEntries(SECTIONS.map(s=>[s[0],{content:'',status:'empty',word_limit:s[3]}])),
+    budget:[],reports:[],milestones:[],ledger:[],documents:[],
+    states:Object.fromEntries(STATES.map(([a])=>[a,{fy2026_award:KNOWN_AWARDS[a]??null,award_verified:KNOWN_AWARDS[a]?1:0,lead_agency:'',contact_email:'',program_url:'',provider_application_open:'',provider_application_due:'',notes:''}])),
+    activity:[],nextId:1000
+  };
+}
+function sampleState(){
+  const s=freshState(); s.sample=true;
+  Object.assign(s.hospital,{name:'Sample Valley Community Hospital',ccn:'123456',state:'AL',county:'Sample',facility_type:'CAH',licensed_beds:25,service_area_population:18500,contact_name:'Jane Doe',contact_title:'CFO',contact_email:'cfo@example.org',uei:'ABC123DEF456',sam_expiration:'2027-03-15',requested_amount:2400000,notes:'Sample data. Replace with your hospital on the Profile tab.'});
+  s.answers={
+    service_area:'We serve Sample County and the northern half of Neighbor County, about 18,500 residents. The next hospital is 47 miles away. Median age is 46 and 22 percent of residents live below the poverty line. Medicaid and self pay make up 38 percent of our volume.',
+    health_challenges:'Our 2024 CHNA ranks diabetes, heart failure, and substance use as the top three. The county diabetes rate is 15.8 percent against a state rate of 12.9. There is no psychiatrist within 60 miles.',
+    access_gaps:'We closed OB in 2022. There is no local cardiology or endocrinology. Average ED wait for a behavioral health bed is 31 hours. One EMS unit covers the whole county.',
+    financial_pressure:'Operating margin was negative 4.1 percent in FY2025. Days cash on hand is 38. Uncompensated care rose 19 percent year over year.',
+    project_name:'Sample Valley Chronic Care and Tele-Behavioral Health Initiative',
+    project_summary:'We want to hire two RN care managers to run a chronic care program for diabetes and heart failure patients, start tele-psychiatry in the ED and clinic, and upgrade our EHR so both can be documented and measured.',
+    activities:'Hire two RN care managers\nDeploy 150 remote patient monitoring kits\nContract for tele-psychiatry coverage 7 days a week\nUpgrade EHR telehealth and remote monitoring modules\nCybersecurity assessment and remediation',
+    people_served:'About 600 chronic disease patients per year in the care program and roughly 400 behavioral health encounters per year through tele-psychiatry.'};
+  const b=(cc,ct,li,j,...y)=>({id:s.nextId++,category_code:cc,cost_type:ct,line_item:li,justification:j,year1:y[0],year2:y[1],year3:y[2],year4:y[3],year5:y[4]});
+  s.budget=[
+    b('A','personnel','RN care managers (2.0 FTE)','Two RN care managers at $82,000 each plus 3 percent annual increase run the chronic care program.',164000,168920,174000,179000,184000),
+    b('A','fringe','Fringe on care managers at 28 percent','Hospital standard fringe rate.',45920,47298,48720,50120,51520),
+    b('C','equipment','Remote patient monitoring kits (150)','Vendor quote $1,100 per kit including 1 year of connectivity.',165000,0,0,0,0),
+    b('H','contractual','Tele-psychiatry coverage contract','Quoted at $18,000 per month for 7-day coverage.',216000,216000,216000,216000,216000),
+    b('F','contractual','EHR telehealth and RPM module upgrade','Vendor statement of work.',140000,24000,24000,24000,24000),
+    b('F','contractual','Cybersecurity assessment and remediation','Third party assessment plus MFA and endpoint protection rollout.',95000,20000,20000,20000,20000)];
+  s.checklist[0].status='complete'; s.checklist[1].status='in_progress'; s.checklist[1].owner='J. Doe'; s.checklist[2].status='complete';
+  return s;
+}
+let S;
+function load(){
+  try{const raw=localStorage.getItem(KEY); if(raw){S=JSON.parse(raw); return;}}catch(e){}
+  S=sampleState();
+}
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('Could not save. This browser is blocking storage.');} }
+function log(text){S.activity.unshift({ts:new Date().toISOString().slice(0,16).replace('T',' '),text}); S.activity=S.activity.slice(0,30);}
+function commit(msg){ if(msg) log(msg); save(); }
+const nid=()=>S.nextId++;
+
+// ---------- helpers ----------
+const esc=(s)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=(n,d=0)=>Number(n||0).toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:d,minimumFractionDigits:d});
+const today=()=>new Date().toISOString().slice(0,10);
+const fmtDate=(d)=>{if(!d)return '';const [y,m,dd]=d.split('-');return `${Number(m)}/${Number(dd)}/${y}`;};
+const daysUntil=(d)=>d?Math.round((new Date(d+'T00:00:00')-new Date(today()+'T00:00:00'))/86400000):null;
+const label=(s)=>String(s||'').replace(/_/g,' ').replace(/^\w/,c=>c.toUpperCase());
+const words=(t)=>(t||'').trim().split(/\s+/).filter(Boolean).length;
+const badge=(t,tone='')=>`<span class="badge ${tone}">${esc(t)}</span>`;
+const opts=(list,cur)=>list.map(([v,l])=>`<option value="${esc(v)}"${String(v)===String(cur)?' selected':''}>${esc(l)}</option>`).join('');
+const lineTotal=(b)=>YEARS.reduce((s,y)=>s+Number(b['year'+y]||0),0);
+const usesTitle=(c)=>(USES.find(u=>u[0]===c)||[])[1]||'';
+let toastT; function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+
+// ---------- computed ----------
+function budgetSummary(){
+  const byYear=[0,0,0,0,0],byCategory={},byType={};let grand=0,missing=0;
+  for(const b of S.budget){const t=lineTotal(b);grand+=t;YEARS.forEach((y,i)=>byYear[i]+=Number(b['year'+y]||0));byCategory[b.category_code]=(byCategory[b.category_code]||0)+t;byType[b.cost_type]=(byType[b.cost_type]||0)+t;if(!b.justification.trim())missing++;}
+  const h=S.hospital;const basis=h.awarded_amount||h.requested_amount||grand;
+  const caps=[{key:'admin',label:'Administrative (indirect) costs',share:.10,amount:byType.indirect||0},{key:'capital',label:'Capital and construction',share:.20,amount:byType.construction||0},{key:'provider',label:'Provider payments (Use B)',share:.20,amount:byCategory.B||0}].map(c=>({...c,limit:basis*c.share,exceeded:basis>0&&c.amount>basis*c.share}));
+  return {byYear,byCategory,byType,grand,missing,basis,caps,lines:S.budget.length};
+}
+function ledgerSummary(){
+  let drawn=0,spent=0;const byCat={};
+  for(const b of S.budget){(byCat[b.category_code]??={budget:0,spent:0}).budget+=lineTotal(b);}
+  for(const e of S.ledger){if(e.direction==='drawdown')drawn+=e.amount;else{spent+=e.amount;if(e.category_code)(byCat[e.category_code]??={budget:0,spent:0}).spent+=e.amount;}}
+  return {award:S.hospital.awarded_amount||0,drawn,spent,cashOnHand:drawn-spent,remaining:(S.hospital.awarded_amount||0)-spent,byCat};
+}
+function phaseStats(p){const items=S.checklist.filter(c=>c.phase===p&&c.status!=='na');return {total:items.length,complete:items.filter(c=>c.status==='complete').length,blocked:items.filter(c=>c.status==='blocked').length,required_open:items.filter(c=>c.is_required&&c.status!=='complete').length};}
+function selectedCategories(){const codes=[...new Set(S.budget.map(b=>b.category_code))].sort();return codes.map(c=>({code:c,title:usesTitle(c)}));}
+
+// ---------- narrative drafter ----------
+function ans(a,key,ph){const v=(a[key]||'').trim();return v||`[${ph}]`;}
+function lines(t){return (t||'').split(/\r?\n/).map(s=>s.replace(/^[-*\d.)\s]+/,'').trim()).filter(Boolean);}
+function sentenceList(items){if(!items.length)return '';if(items.length===1)return items[0];return `${items.slice(0,-1).join(', ')}, and ${items[items.length-1]}`;}
+function draftSection(key){
+  const h=S.hospital,a=S.answers,categories=selectedCategories(),budget=S.budget;
+  const name=h.name||'[Hospital name]';const projectName=ans(a,'project_name','Project name');
+  const catList=categories.length?sentenceList(categories.map(c=>`Use ${c.code} (${c.title})`)):'[select use-of-funds categories on the Budget tab]';
+  const where=[h.county?`${h.county} County`:'',h.state].filter(Boolean).join(', ')||'[county, state]';
+  const intro=`${name} is a ${TYPE_LABEL[h.facility_type]||'rural provider'}${h.licensed_beds?` with ${h.licensed_beds} licensed beds`:''} located in ${where}.`;
+  switch(key){
+    case 'need':return [`${intro} ${ans(a,'service_area','Describe the service area, population, and distance to the next hospital')}`,`The community faces significant health challenges. ${ans(a,'health_challenges','Summarize the top health problems from your CHNA and county health rankings')}`,`Access to care is limited. ${ans(a,'access_gaps','Describe missing or at-risk services and barriers such as transportation')}`,`These gaps persist in part because of the hospital's financial position. ${ans(a,'financial_pressure','Describe operating margin, days cash, payer mix, and uncompensated care')} Without new investment, the hospital's ability to maintain and expand services for the community is at risk.`].join('\n\n');
+    case 'project':{const acts=lines(a.activities);const actText=acts.length?`The project includes the following activities:\n\n${acts.map((s,i)=>`${i+1}. ${s}`).join('\n')}`:'[List the specific activities or purchases, one per line]';
+      return [`${name} proposes ${projectName}, a project aligned with the state's approved Rural Health Transformation Program plan and with ${catList}.`,ans(a,'project_summary','Describe in plain words what you want to do with the money'),actText,`The project will serve ${ans(a,'people_served','Who is served and roughly how many per year')}. Each activity is designed to supplement, not supplant, existing services and funding, adding new capacity that the hospital cannot currently support from operating revenue.`].join('\n\n');}
+    case 'workforce':{const usesE=categories.some(c=>c.code==='E');return [`${name} will strengthen its rural clinical workforce as part of ${projectName}. ${ans(a,'workforce_plan','Describe positions to recruit, retain, or train and how you will recruit')}`,usesE?'Consistent with Use E, every clinician supported with recruitment or retention funding will sign a written commitment to serve the rural community for a minimum of five years, with prorated repayment terms if the commitment is not met. The hospital will track service obligations and report on retention annually.':'Where recruitment or retention incentives are used, the hospital will document the service commitment and track retention so the state can report on workforce outcomes.'].join('\n\n');}
+    case 'technology':return [`${name} will invest in technology that improves efficiency, cybersecurity, and patient outcomes. ${ans(a,'technology_plan','Describe systems, what problem each fixes, and expected improvements')}`,'The hospital will follow its procurement policy for each purchase, obtain competitive quotes where required by the state, and maintain an equipment inventory for items over the applicable threshold. Cybersecurity work will be documented against a recognized framework so improvements can be measured and reported.'].join('\n\n');
+    case 'outcomes':return [`${projectName} will be evaluated against measurable outcomes with a documented baseline, a target, and a data source for each. ${ans(a,'outcomes','State what will be different in 1 year and in 5 years, with numbers')}`,`Outcome data will be drawn from ${ans(a,'data_sources','EHR reports, claims, HR records, surveys, or state data')}. The project director will review progress quarterly, compare results to targets, and report variances and corrective actions to the state on the required schedule.`].join('\n\n');
+    case 'partnerships':return [`${name} will implement ${projectName} in coordination with community and regional partners. ${ans(a,'partners','List each partner and what it contributes')}`,'Partner roles will be documented in letters of support or written agreements, and the hospital will convene partners at least quarterly to coordinate services, share data where permitted, and avoid duplication.'].join('\n\n');
+    case 'sustainability':return [`The hospital has planned for continuation of ${projectName} beyond the award period. ${ans(a,'sustainability','Describe new revenue, savings, payer contracts, or how costs are absorbed')}`,'Costs that are one-time (equipment, implementation, start-up recruitment) are front-loaded in the budget, and recurring costs are stepped down over the project period so that the hospital operating budget can carry them by the final year.'].join('\n\n');
+    case 'capacity':return [ans(a,'capacity','Name who manages the project and the money, past grant experience, and financial controls'),`The hospital maintains separate general ledger accounts for the award, reconciles the award ledger to the general ledger monthly, and follows written procurement, allowable cost, and time and effort procedures. ${h.uei?`The hospital's UEI is ${h.uei}`:'[UEI]'}${h.sam_expiration?` and its SAM.gov registration is active through ${fmtDate(h.sam_expiration)}.`:' and its SAM.gov registration is active.'}`,`Key risks and mitigation: ${ans(a,'risks','What could go wrong and the backup plan')}`].join('\n\n');
+    case 'budget_narrative':{if(!budget.length)return '[Add budget lines on the Budget tab, then regenerate this section]';const byType={};for(const b of budget)(byType[b.cost_type]??=[]).push({...b,total:lineTotal(b)});const grand=Object.values(byType).flat().reduce((s,b)=>s+b.total,0);
+      const parts=[`The total requested budget for ${projectName} is ${money(grand)} over the project period${h.awarded_amount?`, against an award of ${money(h.awarded_amount)}`:''}. Costs are summarized by category below.`];
+      for(const [type,items] of Object.entries(byType)){const sub=items.reduce((s,b)=>s+b.total,0);parts.push(`${label(type)} (${money(sub)}):\n${items.map(b=>`- ${b.line_item} (Use ${b.category_code}), ${money(b.total)}. ${b.justification||'[justification needed]'}`).join('\n')}`);}
+      parts.push('All costs are necessary, reasonable, and allocable to the project, and were estimated using current vendor quotes, salary schedules, or historical costs. No funds will be used to supplant existing federal or state funding.');return parts.join('\n\n');}
+  }
+  return '';
+}
+function exportPacket(){
+  const h=S.hospital;const out=[`# ${h.name||'Hospital'}: Rural Health Transformation Program application packet`,'',`Generated ${today()}`,'',`Facility: ${TYPE_LABEL[h.facility_type]||''}, CCN ${h.ccn||'[CCN]'}, ${h.county?h.county+' County, ':''}${h.state||''}`,`Contact: ${h.contact_name||'[contact]'}${h.contact_title?', '+h.contact_title:''}${h.contact_email?', '+h.contact_email:''}`,`Amount requested: ${money(h.requested_amount)}`,''];
+  for(const [k,title] of SECTIONS){out.push(`## ${title}`,'',S.sections[k].content||'[Not drafted]','');}
+  const bs=budgetSummary();out.push('## Budget summary','','| Use | Type | Line item | Y1 | Y2 | Y3 | Y4 | Y5 | Total |','|---|---|---|---:|---:|---:|---:|---:|---:|');
+  for(const b of S.budget)out.push(`| ${b.category_code} | ${label(b.cost_type)} | ${b.line_item} | ${YEARS.map(y=>money(b['year'+y])).join(' | ')} | ${money(lineTotal(b))} |`);
+  out.push(`| | | **Total** | ${bs.byYear.map(v=>money(v)).join(' | ')} | **${money(bs.grand)}** |`);
+  download(`rhtp-packet-${today()}.md`,out.join('\n'),'text/markdown');
+}
+function exportCsv(){
+  const rows=[['use','cost_type','line_item','year1','year2','year3','year4','year5','total','justification']];
+  for(const b of S.budget)rows.push([b.category_code,b.cost_type,b.line_item,...YEARS.map(y=>b['year'+y]||0),lineTotal(b),b.justification]);
+  download(`rhtp-budget-${today()}.csv`,rows.map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n'),'text/csv');
+}
+function download(name,text,type){
+  // The hosted viewer only saves files through the downloads capability. If it is not
+  // available, the text goes to the clipboard so nothing is lost.
+  const fallback=()=>navigator.clipboard?.writeText(text).then(()=>toast(`Saving is unavailable here. ${name} was copied to your clipboard instead.`)).catch(()=>toast('Saving is unavailable in this view.'));
+  const use=window.claude?.use;
+  if(!use){fallback();return;}
+  use.call(window.claude,'downloads').then(dl=>{
+    if(!dl)return fallback();
+    return dl.save({filename:name,data:text}).then(()=>toast(`${name} saved`)).catch(err=>{
+      if(err?.code==='declined')return;
+      if(err?.code==='rate_limited'){toast('One save at a time. Try again in a moment.');return;}
+      fallback();
+    });
+  }).catch(fallback);
+}
+
+// ---------- routing and render ----------
+const PAGES=[['dashboard','Dashboard'],['readiness','Readiness'],['narrative','Narrative'],['budget','Budget'],['compliance','Compliance'],['documents','Documents'],['program','Program'],['profile','Profile']];
+const ui={page:'dashboard',phase:'application',hideDone:false,narTab:'intake',section:'need',compTab:'reports',progTab:'overview',stateCode:'',editBudget:null,showAdd:{}};
+function go(p){ui.page=p;render();window.scrollTo({top:0});}
+function render(){renderNav();const m=document.getElementById('main');m.innerHTML=({dashboard:Dashboard,readiness:Readiness,narrative:Narrative,budget:Budget,compliance:Compliance,documents:Documents,program:Program,profile:Profile})[ui.page]();}
+function renderNav(){
+  const app=phaseStats('application');
+  document.getElementById('nav').innerHTML=`<div class="brand"><strong>RHTP Navigator</strong><span>Rural Health Transformation Program</span></div>`+
+    PAGES.map(([k,l])=>`<button data-go="${k}" class="${ui.page===k?'on':''}">${l}${k==='readiness'?`<span class="count">${app.complete}/${app.total}</span>`:''}</button>`).join('')+
+    `<div class="foot"><span>Data is saved in this browser only. Export a backup from Profile.</span><span>Reference content is a starting point. Confirm requirements with your state lead agency and the CMS NOFO.</span></div>`;
+}
+function head(title,sub,actions=''){return `<div class="head"><div><h1>${esc(title)}</h1><p>${sub}</p></div><div class="actions">${actions}</div></div>`;}
+function stat(l,v,sub=''){return `<div class="card stat"><div class="lbl">${esc(l)}</div><div class="val">${v}</div>${sub?`<div class="sub">${sub}</div>`:''}</div>`;}
+function field(l,inner,help='',span=false){return `<label class="field${span?' span2':''}"><span>${esc(l)}${help?` <span class="help">${esc(help)}</span>`:''}</span>${inner}</label>`;}
+function progress(v,m,green){const pct=m?Math.round(v/m*100):0;return `<div class="bar${green?' green':''}"><i style="width:${pct}%"></i></div>`;}
+
+// ---------- pages ----------
+function Dashboard(){
+  const h=S.hospital,app=phaseStats('application'),bs=budgetSummary(),ls=ledgerSummary(),t=today();
+  const alerts=[];
+  if(S.sample)alerts.push(['info','You are looking at sample data. Go to Profile to enter your hospital, or use Reset there to start clean.']);
+  if(h.sam_expiration){const d=daysUntil(h.sam_expiration);if(d!==null&&d<60)alerts.push([d<0?'danger':'warn',`SAM.gov registration ${d<0?'expired':'expires'} ${fmtDate(h.sam_expiration)}. Renew now; it takes weeks.`]);}
+  const overdue=S.checklist.filter(c=>c.due_date&&c.due_date<t&&!['complete','na'].includes(c.status));
+  if(overdue.length)alerts.push(['warn',`${overdue.length} checklist item${overdue.length>1?'s are':' is'} past due.`]);
+  if(h.awarded_amount&&bs.grand>h.awarded_amount)alerts.push(['danger',`Budget total ${money(bs.grand)} exceeds the award of ${money(h.awarded_amount)}.`]);
+  const lateReports=S.reports.filter(r=>r.due_date<t&&!['submitted','accepted'].includes(r.status));
+  if(lateReports.length)alerts.push(['danger',`${lateReports.length} report${lateReports.length>1?'s are':' is'} past due.`]);
+  const drafted=SECTIONS.filter(([k])=>S.sections[k].content.trim()).length,finals=SECTIONS.filter(([k])=>S.sections[k].status==='final').length;
+  const upcoming=S.checklist.filter(c=>c.due_date&&c.due_date>=t&&!['complete','na'].includes(c.status)).sort((a,b)=>a.due_date.localeCompare(b.due_date)).slice(0,5);
+  const reports=S.reports.filter(r=>!['submitted','accepted'].includes(r.status)).sort((a,b)=>a.due_date.localeCompare(b.due_date)).slice(0,5);
+  const ms=S.milestones.filter(m=>m.status!=='complete').sort((a,b)=>(a.due_date||'9').localeCompare(b.due_date||'9')).slice(0,5);
+  const awarded=h.awarded_amount>0;
+  const due=[...overdue.map(c=>`<li><span>${esc(c.title)}<div class="small muted">Checklist${c.owner?', '+esc(c.owner):''}</div></span>${badge('Overdue '+fmtDate(c.due_date),'red')}</li>`),
+    ...reports.map(r=>{const d=daysUntil(r.due_date);return `<li><span>${esc(r.title)}<div class="small muted">Report</div></span>${badge(fmtDate(r.due_date),d<0?'red':d<14?'amber':'')}</li>`;}),
+    ...ms.map(m=>`<li><span>${esc(m.title)}<div class="small muted">Milestone</div></span>${badge(m.due_date?fmtDate(m.due_date):label(m.status),STATUS_TONE[m.status])}</li>`),
+    ...upcoming.map(c=>`<li><span>${esc(c.title)}<div class="small muted">Checklist${c.owner?', '+esc(c.owner):''}</div></span>${badge(fmtDate(c.due_date))}</li>`)];
+  return head(h.name||'Set up your hospital',h.name?`${esc(h.facility_type)} in ${h.county?esc(h.county)+' County, ':''}${esc(h.state||'state not set')}`:'Start on the Profile tab, then work through Readiness, Narrative, and Budget.',
+      `${h.name?'':'<button class="btn primary" data-go="profile">Set up profile</button>'}<button class="btn" data-go="readiness">Open checklist</button>`)+
+    alerts.map(([l,t])=>`<div class="alert ${l}">${t}</div>`).join('')+
+    `<div class="grid cols-4" style="margin-top:12px">${stat('Application readiness',`${app.total?Math.round(app.complete/app.total*100):0}%`,`${app.complete} of ${app.total} items, ${app.required_open} required still open`)}${stat('Narrative sections',`${drafted} / ${SECTIONS.length}`,`${finals} marked final`)}${stat('Budget total',money(bs.grand),awarded?`Award ${money(h.awarded_amount)}`:h.requested_amount?`Requesting ${money(h.requested_amount)}`:`${bs.lines} lines`)}${stat(awarded?'Award remaining':'Funds drawn',money(awarded?ls.remaining:ls.drawn),`Spent ${money(ls.spent)}, drawn ${money(ls.drawn)}`)}</div>
+    <div class="grid cols-2" style="margin-top:14px">
+      <div class="card"><div class="card-head"><h2>Phase progress</h2><a href="#" data-go="readiness" class="small">Details</a></div>
+        ${['application','award','reporting'].map(p=>{const s=phaseStats(p);return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between"><strong>${label(p)}</strong><span class="muted small">${s.complete}/${s.total}${s.blocked?`, ${s.blocked} blocked`:''}</span></div>${progress(s.complete,s.total,s.total>0&&s.complete===s.total)}</div>`;}).join('')}</div>
+      <div class="card"><div class="card-head"><h2>Due soon</h2><a href="#" data-go="compliance" class="small">Calendar</a></div>${due.length?`<ul class="list">${due.join('')}</ul>`:'<p class="muted">Nothing scheduled. Add due dates to checklist items, reports, or milestones.</p>'}</div>
+    </div>
+    <div class="card" style="margin-top:14px"><div class="card-head"><h2>Recent activity</h2></div>${S.activity.length?`<ul class="list">${S.activity.slice(0,10).map(a=>`<li><span>${esc(a.text)}</span><span class="muted small">${esc(a.ts)}</span></li>`).join('')}</ul>`:'<p class="muted">No activity yet.</p>'}</div>`;
+}
+
+function Profile(){
+  const h=S.hospital;const tx=(k,type='text')=>`<input id="h_${k}" type="${type}" data-h="${k}" value="${esc(h[k])}">`;const nm=(k,step=1)=>`<input id="h_${k}" type="number" min="0" step="${step}" data-h="${k}" value="${esc(h[k]||0)}">`;
+  return head('Hospital profile','Facility, contacts, registrations, and award details. Everything else in the app reads from here. Changes save as you type.',
+      `<button class="btn" data-act="export-json">Export backup (.json)</button><label class="btn" for="import-json">Import backup</label><input id="import-json" type="file" accept=".json" hidden><button class="btn danger" data-act="reset">Reset all data</button>`)+
+    `<div class="card"><h2>Facility</h2><div class="form" style="margin-top:10px">${field('Hospital name',tx('name'),'',true)}${field('CCN',tx('ccn'),'Medicare provider number')}${field('Facility type',`<select id="h_facility_type" data-h="facility_type">${opts(FACILITY,h.facility_type)}</select>`)}${field('State',`<select id="h_state" data-h="state"><option value="">Select</option>${opts(STATES,h.state)}</select>`)}${field('County',tx('county'))}${field('Licensed beds',nm('licensed_beds'))}${field('Service area population',nm('service_area_population'))}${field('Fiscal year end',tx('fiscal_year_end'),'MM-DD')}</div></div>
+    <div class="card"><h2>Primary contact</h2><div class="form" style="margin-top:10px">${field('Name',tx('contact_name'))}${field('Title',tx('contact_title'))}${field('Email',tx('contact_email','email'))}${field('Phone',tx('contact_phone'))}</div></div>
+    <div class="card"><h2>Registrations</h2><div class="form" style="margin-top:10px">${field('UEI',tx('uei'),'Unique Entity ID from SAM.gov')}${field('SAM.gov registration expires',tx('sam_expiration','date'))}</div></div>
+    <div class="card"><h2>Funding request and award</h2><div class="form" style="margin-top:10px">${field('Amount requested',nm('requested_amount',1000))}${field('Amount awarded',nm('awarded_amount',1000),'Leave 0 until you have an award letter')}${field('Award date',tx('award_date','date'))}${field('Project start',tx('project_start','date'))}${field('Project end',tx('project_end','date'))}${field('Notes',`<textarea id="h_notes" data-h="notes">${esc(h.notes)}</textarea>`,'',true)}</div></div>`;
+}
+
+function Readiness(){
+  const t=today();const PH=[['application','Application','What your state will ask for in its sub-award application.'],['award','Award setup','The week after the award letter arrives.'],['reporting','Reporting','Ongoing obligations while you spend the money.']];
+  const items=S.checklist.filter(c=>c.phase===ui.phase);const active=items.filter(c=>c.status!=='na');const done=active.filter(c=>c.status==='complete').length;
+  const groups=new Map();for(const c of items){if(ui.hideDone&&['complete','na'].includes(c.status))continue;(groups.get(c.category)||groups.set(c.category,[]).get(c.category)).push(c);}
+  const STAT=['not_started','in_progress','blocked','complete','na'];
+  return head('Readiness checklist','Every document and decision a small hospital typically needs, in order. Add your state\'s own line items as you learn them.',
+      `<label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" id="hide-done" data-act="hide-done" ${ui.hideDone?'checked':''}> Hide completed</label><button class="btn primary" data-act="toggle-add" data-k="check">Add item</button>`)+
+    `<div class="tabs">${PH.map(([p,l])=>{const s=phaseStats(p);return `<button data-phase="${p}" class="${ui.phase===p?'on':''}">${l} <span class="muted">${s.complete}/${s.total}</span></button>`;}).join('')}</div>
+    <p class="muted small">${PH.find(p=>p[0]===ui.phase)[2]}</p><div style="margin:8px 0 14px">${progress(done,active.length,active.length>0&&done===active.length)}</div>
+    ${ui.showAdd.check?`<form class="card" data-form="check"><h3>New ${label(ui.phase)} item</h3><div class="form" style="margin-top:10px">${field('Title','<input name="title" id="nc_title" required>','',true)}${field('Category','<input name="category" id="nc_cat" placeholder="State specific">')}${field('Owner','<input name="owner" id="nc_owner">')}${field('Due date','<input name="due_date" id="nc_due" type="date">')}${field('Description','<textarea name="description" id="nc_desc"></textarea>','',true)}</div><div class="actions" style="margin-top:10px"><button class="btn primary">Save</button><button type="button" class="btn" data-act="toggle-add" data-k="check">Cancel</button></div></form>`:''}
+    <div class="card">${groups.size?[...groups].map(([cat,list])=>`<div class="cat">${esc(cat)}</div>${list.map(c=>{const od=c.due_date&&c.due_date<t&&!['complete','na'].includes(c.status);return `<div class="row${c.status==='complete'?' done':''}" data-id="${c.id}">
+      <input type="checkbox" id="ck_${c.id}" data-c="toggle" ${c.status==='complete'?'checked':''} style="margin-top:4px">
+      <div><div class="t">${esc(c.title)} ${badge(c.is_required?'Required':'Optional',c.is_required?'blue':'')} ${od?badge('Overdue','red'):''}</div><div class="d">${esc(c.description)}</div>
+        <div class="form" style="margin-top:6px;grid-template-columns:1fr 1fr"><input class="inline" id="ev_${c.id}" data-c="evidence_link" placeholder="Evidence link" value="${esc(c.evidence_link)}" style="width:100%"><input class="inline" id="nt_${c.id}" data-c="notes" placeholder="Notes" value="${esc(c.notes)}" style="width:100%"></div></div>
+      <select class="inline" id="st_${c.id}" data-c="status">${STAT.map(s=>`<option value="${s}"${c.status===s?' selected':''}>${label(s)}</option>`).join('')}</select>
+      <input class="inline" id="ow_${c.id}" data-c="owner" placeholder="Owner" value="${esc(c.owner)}" style="width:110px">
+      <input class="inline" id="dd_${c.id}" type="date" data-c="due_date" value="${esc(c.due_date)}">
+      <button class="btn sm danger" data-c="delete" title="Delete">✕</button></div>`;}).join('')}`).join(''):'<p class="muted">Nothing to show.</p>'}</div>`;
+}
+
+function Narrative(){
+  return head('Narrative drafter','Answer plain questions about your hospital and project. The drafter turns them into first drafts of each grant section, with brackets wherever you still owe an answer.',`<button class="btn" data-act="export-md">Export packet (.md)</button>`)+
+    `<div class="tabs"><button data-nar="intake" class="${ui.narTab==='intake'?'on':''}">1. Intake questions</button><button data-nar="sections" class="${ui.narTab==='sections'?'on':''}">2. Draft sections</button></div>`+(ui.narTab==='intake'?Intake():Sections());
+}
+function Intake(){
+  const answered=QUESTIONS.filter(q=>(S.answers[q[0]]||'').trim()).length;const groups=new Map();for(const q of QUESTIONS)(groups.get(q[1])||groups.set(q[1],[]).get(q[1])).push(q);
+  return `<div class="card" style="margin-bottom:14px"><div class="card-head"><strong>${answered} of ${QUESTIONS.length} answered</strong><span class="muted small">Answers save as you type</span></div>${progress(answered,QUESTIONS.length,answered===QUESTIONS.length)}</div>`+
+    [...groups].map(([sec,qs])=>`<div class="card"><h2>${esc(SECTIONS.find(s=>s[0]===sec)[1])}</h2><div style="margin-top:12px">${qs.map(([k,,p,h,type])=>`<label class="question"><span class="q">${esc(p)}</span><span class="h">${esc(h)}</span>${type==='text'?`<input id="q_${k}" data-q="${k}" value="${esc(S.answers[k]||'')}">`:`<textarea id="q_${k}" data-q="${k}">${esc(S.answers[k]||'')}</textarea>`}</label>`).join('')}</div></div>`).join('')+
+    `<div class="actions" style="margin-top:14px"><button class="btn primary" data-nar="sections">Continue to draft sections</button></div>`;
+}
+function Sections(){
+  const sec=S.sections[ui.section];const meta=SECTIONS.find(s=>s[0]===ui.section);const wc=words(sec.content);const ph=(sec.content.match(/\[[^\]]+\]/g)||[]).length;
+  return `<div class="split"><div class="card seclist">${SECTIONS.map(([k,t])=>`<button data-sec="${k}" class="${k===ui.section?'on':''}"><span>${esc(t)}</span>${badge(label(S.sections[k].status),STATUS_TONE[S.sections[k].status])}</button>`).join('')}<div style="margin-top:10px"><button class="btn sm" data-act="gen-all" style="width:100%">Generate all empty sections</button></div></div>
+    <div class="card editor"><div class="card-head"><div><h2>${esc(meta[1])}</h2><p class="muted small">${esc(meta[2])}</p></div><div class="actions"><button class="btn" data-act="gen-one">${sec.content?'Regenerate draft':'Generate draft'}</button><button class="btn primary" data-act="save-section">Save</button></div></div>
+    <textarea id="sec_${ui.section}" placeholder="Generate a draft from your intake answers, or write here directly.">${esc(sec.content)}</textarea>
+    <div class="card-head" style="margin-top:8px"><span class="small ${wc>sec.word_limit?'ph':'muted'}" id="wc">${wc} / ${sec.word_limit} words${ph?` · ${ph} placeholder${ph>1?'s':''} in brackets`:''}</span><div class="actions"><span class="small muted">Status</span><select class="inline" id="sec_status" data-act="sec-status">${['empty','draft','review','final'].map(s=>`<option value="${s}"${sec.status===s?' selected':''}>${label(s)}</option>`).join('')}</select><span class="small muted">Limit</span><input class="inline" id="sec_limit" type="number" style="width:90px" data-act="sec-limit" value="${sec.word_limit}"></div></div></div></div>`;
+}
+
+function Budget(){
+  const bs=budgetSummary();const e=ui.editBudget||{category_code:'A',cost_type:'personnel',line_item:'',justification:'',year1:0,year2:0,year3:0,year4:0,year5:0};
+  return head('Budget worksheet','Five year budget by use-of-funds category and cost type. Every line needs a justification; states score budgets on whether costs are reasonable, necessary, and tied to an activity.',`<button class="btn" data-act="export-csv">Export CSV</button>`)+
+    `<div class="grid cols-4">${stat('Total request',money(bs.grand),`${bs.lines} lines`)}${bs.basis>0?stat(bs.grand>bs.basis?'Over award basis':'Under award basis',`<span style="color:${bs.grand>bs.basis?'var(--bad)':'var(--good)'}">${money(Math.abs(bs.basis-bs.grand))}</span>`,`Basis ${money(bs.basis)}`):''}${stat('Year 1',money(bs.byYear[0]),`${bs.grand?Math.round(bs.byYear[0]/bs.grand*100):0}% of total`)}${stat('Missing justification',`<span style="color:${bs.missing?'var(--warn)':'inherit'}">${bs.missing}</span>`,'lines without a reason')}</div>
+    ${bs.caps.filter(c=>c.exceeded).map(c=>`<div class="alert warn" style="margin-top:12px">${c.label} is ${money(c.amount)}, above the reported ${Math.round(c.share*100)}% cap (${money(c.limit)}). Your state may pass down a tighter limit. Verify against the NOFO and your state agreement.</div>`).join('')}
+    <form class="card" data-form="budget" style="margin-top:14px"><h2>${ui.editBudget?'Edit line':'Add a line'}</h2><div class="form" style="margin-top:10px">
+      ${field('Line item',`<input name="line_item" id="b_line" required placeholder="RN care manager (1.0 FTE)" value="${esc(e.line_item)}">`,'',true)}
+      ${field('Use of funds',`<select name="category_code" id="b_cat">${USES.map(u=>`<option value="${u[0]}"${e.category_code===u[0]?' selected':''}>${u[0]}. ${esc(u[1])}</option>`).join('')}</select>`)}
+      ${field('Cost type',`<select name="cost_type" id="b_type">${COST_TYPES.map(t=>`<option value="${t}"${e.cost_type===t?' selected':''}>${label(t)}</option>`).join('')}</select>`)}
+      ${YEARS.map(y=>field(`Year ${y}`,`<input name="year${y}" id="b_y${y}" type="number" min="0" step="1" value="${e['year'+y]||0}">`)).join('')}
+      ${field('Justification',`<textarea name="justification" id="b_just" placeholder="Why this cost, how you estimated it, and what it delivers">${esc(e.justification)}</textarea>`,'',true)}
+    </div><div class="actions" style="margin-top:10px"><button class="btn primary">${ui.editBudget?'Save changes':'Add line'}</button>${ui.editBudget?'<button type="button" class="btn" data-act="cancel-edit">Cancel</button>':''}</div></form>
+    <div class="card wrap"><table><thead><tr><th>Use</th><th>Type</th><th>Line item</th>${YEARS.map(y=>`<th class="num">Y${y}</th>`).join('')}<th class="num">Total</th><th></th></tr></thead><tbody>
+      ${S.budget.length?S.budget.map(b=>`<tr data-id="${b.id}"><td>${badge(b.category_code,'blue')}</td><td>${label(b.cost_type)}</td><td>${esc(b.line_item)}${!b.justification.trim()?'<div class="small ph">Needs justification</div>':''}<div class="small muted">${esc(b.justification)}</div></td>${YEARS.map(y=>`<td class="num">${b['year'+y]?money(b['year'+y]):''}</td>`).join('')}<td class="num">${money(lineTotal(b))}</td><td style="white-space:nowrap"><button class="btn sm" data-b="edit">Edit</button> <button class="btn sm danger" data-b="delete">✕</button></td></tr>`).join('')+`<tr class="total"><td colspan="3">Total</td>${bs.byYear.map(v=>`<td class="num">${money(v)}</td>`).join('')}<td class="num">${money(bs.grand)}</td><td></td></tr>`:'<tr><td colspan="10" class="muted">No budget lines yet.</td></tr>'}
+    </tbody></table></div>
+    <div class="grid cols-2" style="margin-top:14px"><div class="card"><h3>By use of funds</h3><table style="margin-top:8px"><tbody>${Object.entries(bs.byCategory).sort().map(([c,v])=>`<tr><td>${badge(c,'blue')} ${esc(usesTitle(c))}</td><td class="num">${money(v)}</td><td class="num muted">${bs.grand?Math.round(v/bs.grand*100):0}%</td></tr>`).join('')||'<tr><td class="muted">No lines yet.</td></tr>'}</tbody></table></div>
+    <div class="card"><h3>Cap check</h3><table style="margin-top:8px"><tbody>${bs.caps.map(c=>`<tr><td>${c.label}<div class="small muted">Reported cap ${Math.round(c.share*100)}%</div></td><td class="num">${money(c.amount)}</td><td>${bs.basis?badge(c.exceeded?'Over':'OK',c.exceeded?'red':'green'):badge('Set award')}</td></tr>`).join('')}</tbody></table><p class="muted small" style="margin-top:8px">Caps are measured against the award if entered, otherwise the requested amount, otherwise the budget total.</p></div></div>`;
+}
+
+function Compliance(){
+  return head('Post-award compliance','Reporting calendar, work plan milestones, and a fund ledger that reconciles drawdowns against spending. Keep this current and the reports write themselves.')+
+    `<div class="tabs">${[['reports','Reporting calendar'],['milestones','Milestones'],['ledger','Fund ledger']].map(([k,l])=>`<button data-comp="${k}" class="${ui.compTab===k?'on':''}">${l}</button>`).join('')}</div>`+({reports:Reports,milestones:Milestones,ledger:Ledger})[ui.compTab]();
+}
+function Reports(){
+  const t=today();const RT=['progress','financial','performance','audit','closeout','other'],RS=['upcoming','in_progress','submitted','accepted','late'];
+  const list=[...S.reports].sort((a,b)=>a.due_date.localeCompare(b.due_date));
+  return `<div class="actions" style="margin-bottom:12px"><button class="btn primary" data-act="toggle-add" data-k="report">Add report</button><button class="btn" data-act="gen-reports" title="Quarterly and annual reports for year one, based on your project start date">Generate default year 1 schedule</button></div>
+    ${ui.showAdd.report?`<form class="card" data-form="report" style="margin-bottom:14px"><div class="form">${field('Title','<input name="title" id="r_title" required>','',true)}${field('Type',`<select name="report_type" id="r_type">${RT.map(x=>`<option value="${x}">${label(x)}</option>`).join('')}</select>`)}${field('Due date','<input name="due_date" id="r_due" type="date" required>')}${field('Period start','<input name="period_start" id="r_ps" type="date">')}${field('Period end','<input name="period_end" id="r_pe" type="date">')}${field('Notes','<textarea name="notes" id="r_notes"></textarea>','',true)}</div><div class="actions" style="margin-top:10px"><button class="btn primary">Save</button><button type="button" class="btn" data-act="toggle-add" data-k="report">Cancel</button></div></form>`:''}
+    <div class="card wrap"><table><thead><tr><th>Report</th><th>Period</th><th>Due</th><th>Status</th><th>Submitted</th><th>Evidence</th><th></th></tr></thead><tbody>
+      ${list.length?list.map(r=>{const d=daysUntil(r.due_date);const open=!['submitted','accepted'].includes(r.status);return `<tr data-id="${r.id}"><td><strong>${esc(r.title)}</strong><div class="small muted">${label(r.report_type)}${r.notes?' · '+esc(r.notes):''}</div></td><td class="small">${r.period_start?fmtDate(r.period_start):''}${r.period_end?' to '+fmtDate(r.period_end):''}</td><td>${fmtDate(r.due_date)}${open&&d!==null?`<div class="small">${badge(d<0?`${-d} days late`:`${d} days`,d<0?'red':d<14?'amber':'')}</div>`:''}</td>
+        <td><select class="inline" id="rs_${r.id}" data-r="status">${RS.map(s=>`<option value="${s}"${r.status===s?' selected':''}>${label(s)}</option>`).join('')}</select></td>
+        <td><input class="inline" id="ra_${r.id}" type="date" data-r="submitted_at" value="${esc(r.submitted_at)}"><input class="inline" id="rb_${r.id}" data-r="submitted_by" placeholder="By" value="${esc(r.submitted_by)}" style="margin-top:4px;width:100px"></td>
+        <td><input class="inline" id="re_${r.id}" data-r="evidence_link" placeholder="Link" value="${esc(r.evidence_link)}" style="width:140px"></td><td><button class="btn sm danger" data-r="delete">✕</button></td></tr>`;}).join(''):'<tr><td colspan="7" class="muted">No reports yet. Generate the default schedule or add the dates from your state agreement.</td></tr>'}
+    </tbody></table></div>`;
+}
+function Milestones(){
+  const MS=['planned','in_progress','at_risk','complete'];
+  return `<div class="actions" style="margin-bottom:12px"><button class="btn primary" data-act="toggle-add" data-k="ms">Add milestone</button></div>
+    ${ui.showAdd.ms?`<form class="card" data-form="ms" style="margin-bottom:14px"><div class="form">${field('Milestone','<input name="title" id="m_title" required placeholder="Two care managers hired and onboarded">','',true)}${field('Use of funds',`<select name="category_code" id="m_cat"><option value="">None</option>${USES.map(u=>`<option value="${u[0]}">${u[0]}. ${esc(u[1])}</option>`).join('')}</select>`)}${field('Owner','<input name="owner" id="m_owner">')}${field('Target date','<input name="due_date" id="m_due" type="date">')}${field('Metric','<input name="metric" id="m_metric" placeholder="FTEs hired">','What you will report')}${field('Target value','<input name="target_value" id="m_target" placeholder="2">')}${field('Description','<textarea name="description" id="m_desc"></textarea>','',true)}</div><div class="actions" style="margin-top:10px"><button class="btn primary">Save</button><button type="button" class="btn" data-act="toggle-add" data-k="ms">Cancel</button></div></form>`:''}
+    <div class="card wrap"><table><thead><tr><th>Milestone</th><th>Use</th><th>Owner</th><th>Target date</th><th>Status</th><th>Metric</th><th class="num">Target</th><th class="num">Actual</th><th></th></tr></thead><tbody>
+      ${S.milestones.length?S.milestones.map(m=>`<tr data-id="${m.id}"><td><strong>${esc(m.title)}</strong><div class="small muted">${esc(m.description)}</div></td><td>${m.category_code?badge(m.category_code,'blue'):''}</td><td><input class="inline" id="mo_${m.id}" data-m="owner" value="${esc(m.owner)}" style="width:100px"></td><td><input class="inline" id="md_${m.id}" type="date" data-m="due_date" value="${esc(m.due_date)}"></td><td><select class="inline" id="ms_${m.id}" data-m="status">${MS.map(s=>`<option value="${s}"${m.status===s?' selected':''}>${label(s)}</option>`).join('')}</select></td><td class="small">${esc(m.metric)}</td><td class="num">${esc(m.target_value)}</td><td class="num"><input class="inline" id="ma_${m.id}" data-m="actual_value" value="${esc(m.actual_value)}" style="width:70px"></td><td><button class="btn sm danger" data-m="delete">✕</button></td></tr>`).join(''):'<tr><td colspan="9" class="muted">No milestones yet. Copy them from your work plan.</td></tr>'}
+    </tbody></table></div>`;
+}
+function Ledger(){
+  const s=ledgerSummary();const list=[...S.ledger].sort((a,b)=>b.entry_date.localeCompare(a.entry_date));
+  return `<div class="grid cols-4">${stat('Award',money(s.award))}${stat('Drawn down',money(s.drawn),s.award?`${Math.round(s.drawn/s.award*100)}% of award`:'')}${stat('Spent',money(s.spent),s.award?`${Math.round(s.spent/s.award*100)}% of award`:'')}${stat('Cash on hand',money(s.cashOnHand),s.cashOnHand<0?'Spending ahead of drawdowns':'Drawn minus spent')}</div>
+    ${s.cashOnHand<0?`<div class="alert warn" style="margin-top:12px">Expenditures exceed drawdowns by ${money(-s.cashOnHand)}. Submit a reimbursement request or check for missing drawdown entries.</div>`:''}
+    <form class="card" data-form="ledger" style="margin-top:14px"><h2>Record an entry</h2><div class="form" style="margin-top:10px">${field('Date',`<input name="entry_date" id="l_date" type="date" value="${today()}" required>`)}${field('Type','<select name="direction" id="l_dir"><option value="expenditure">Expenditure</option><option value="drawdown">Drawdown (funds received)</option></select>')}${field('Amount','<input name="amount" id="l_amt" type="number" min="0.01" step="0.01" required>')}${field('Use of funds',`<select name="category_code" id="l_cat"><option value="">None</option>${USES.map(u=>`<option value="${u[0]}">${u[0]}. ${esc(u[1])}</option>`).join('')}</select>`)}${field('Cost type',`<select name="cost_type" id="l_type">${COST_TYPES.map(t=>`<option value="${t}"${t==='other'?' selected':''}>${label(t)}</option>`).join('')}</select>`)}${field('Vendor','<input name="vendor" id="l_vendor">')}${field('Invoice or check number','<input name="invoice_ref" id="l_ref">')}${field('Description','<input name="description" id="l_desc">','',true)}${field('Backup document link','<input name="doc_link" id="l_doc" placeholder="Invoice, payroll register, or receipt">','',true)}</div><div class="actions" style="margin-top:10px"><button class="btn primary">Record</button></div></form>
+    <div class="grid cols-2" style="margin-top:14px"><div class="card wrap"><h3>Budget vs actual by use of funds</h3><table style="margin-top:8px"><thead><tr><th>Use</th><th class="num">Budget</th><th class="num">Spent</th><th class="num">Remaining</th></tr></thead><tbody>${Object.entries(s.byCat).sort().map(([c,v])=>`<tr><td>${badge(c,'blue')} ${esc(usesTitle(c))}</td><td class="num">${money(v.budget)}</td><td class="num">${money(v.spent)}</td><td class="num" style="color:${v.budget-v.spent<0?'var(--bad)':'inherit'}">${money(v.budget-v.spent)}</td></tr>`).join('')||'<tr><td colspan="4" class="muted">Add budget lines and expenditures to compare.</td></tr>'}</tbody></table></div>
+    <div class="card"><h3>Monthly close checklist</h3><ul style="padding-left:18px;margin:8px 0 0" class="small"><li>Every expenditure has an invoice or payroll backup linked</li><li>Ledger total matches the RHTP cost center in the general ledger</li><li>Drawdown requests match expenditures since the last request</li><li>Personnel charges have time and effort documentation</li><li>Equipment over the threshold is tagged in the inventory</li></ul></div></div>
+    <div class="card wrap" style="margin-top:14px"><table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Use</th><th>Vendor</th><th>Ref</th><th class="num">Amount</th><th></th></tr></thead><tbody>${list.length?list.map(x=>`<tr data-id="${x.id}"><td>${fmtDate(x.entry_date)}</td><td>${badge(label(x.direction),x.direction==='drawdown'?'green':'')}</td><td>${esc(x.description)}${x.doc_link?`<div class="small"><a href="${esc(x.doc_link)}" target="_blank" rel="noreferrer">Backup</a></div>`:''}</td><td>${x.category_code?badge(x.category_code,'blue'):''}</td><td class="small">${esc(x.vendor)}</td><td class="small">${esc(x.invoice_ref)}</td><td class="num" style="color:${x.direction==='drawdown'?'var(--good)':'inherit'}">${x.direction==='drawdown'?'+':'−'}${money(x.amount,2)}</td><td><button class="btn sm danger" data-l="delete">✕</button></td></tr>`).join(''):'<tr><td colspan="8" class="muted">No ledger entries yet.</td></tr>'}</tbody></table></div>`;
+}
+
+function Documents(){
+  const TYPES=['award','assurance','financial','chna','quote','letter','report','invoice','submission','policy','other'];
+  return head('Documents','An index of where every audit-ready document lives: award letter, assurances, CHNA, quotes, letters of support, submitted reports, invoices. This version stores links, not files, so point each entry at your shared drive or the state portal.')+
+    `<form class="card" data-form="doc"><div class="form">${field('Title','<input name="title" id="d_title" required>','',true)}${field('Type',`<select name="doc_type" id="d_type">${TYPES.map(t=>`<option value="${t}">${label(t)}</option>`).join('')}</select>`)}${field('Link','<input name="external_link" id="d_link" placeholder="https://" required>','Shared drive, portal, or document system',true)}${field('Notes','<input name="notes" id="d_notes">','',true)}</div><div class="actions" style="margin-top:10px"><button class="btn primary">Add document</button></div></form>
+    <div class="card wrap"><table><thead><tr><th>Title</th><th>Type</th><th>Link</th><th>Added</th><th></th></tr></thead><tbody>${S.documents.length?S.documents.map(d=>`<tr data-id="${d.id}"><td><strong>${esc(d.title)}</strong>${d.notes?`<div class="small muted">${esc(d.notes)}</div>`:''}</td><td>${badge(label(d.doc_type))}</td><td class="small"><a href="${esc(d.external_link)}" target="_blank" rel="noreferrer">Open</a></td><td class="small muted">${fmtDate(d.created_at)}</td><td><button class="btn sm danger" data-d="delete">✕</button></td></tr>`).join(''):'<tr><td colspan="5" class="muted">No documents yet.</td></tr>'}</tbody></table></div>`;
+}
+
+function Program(){
+  return head('Program reference','What the Rural Health Transformation Program is, what money can be used for, and how your state is running it. Facts marked "verify" are reported guardrails to confirm against the CMS NOFO.')+
+    `<div class="tabs">${[['overview','Overview and dates'],['uses','Use of funds (A to J)'],['state','Your state']].map(([k,l])=>`<button data-prog="${k}" class="${ui.progTab===k?'on':''}">${l}</button>`).join('')}</div>`+
+    (ui.progTab==='overview'?`<div class="grid cols-2">${[...new Set(FACTS.map(f=>f[0]))].map(s=>`<div class="card"><h2>${esc(s)}</h2><div style="margin-top:10px">${FACTS.filter(f=>f[0]===s).map(f=>`<div style="margin-bottom:12px"><strong>${esc(f[1])}</strong>${/verify/i.test(f[1])?' '+badge('Verify','amber'):''}<div>${esc(f[2])}</div><div class="small muted">Source: ${esc(f[3])}</div></div>`).join('')}</div></div>`).join('')}</div>`
+    :ui.progTab==='uses'?`<div class="alert info">States had to pick at least three of these. Your project should map to categories in your state's approved plan. Tag every budget line and milestone with a letter so reports roll up cleanly.</div><div class="grid cols-2">${USES.map(u=>`<div class="card"><h3>${badge(u[0],'blue')} ${esc(u[1])}</h3><p style="margin-top:8px">${esc(u[2])}</p><p class="small muted" style="margin-top:6px"><strong>Examples:</strong> ${esc(u[3])}</p></div>`).join('')}</div>`
+    :StatePanel());
+}
+function StatePanel(){
+  const code=ui.stateCode||S.hospital.state;const st=S.states[code];const name=(STATES.find(s=>s[0]===code)||[])[1];
+  const known=STATES.filter(([a])=>S.states[a].fy2026_award);
+  return `<div class="card"><div class="form">${field('State',`<select id="state-pick" data-act="pick-state"><option value="">Select</option>${opts(STATES,code)}</select>`)}</div>
+    ${st?`<div style="margin-top:12px"><h2>${esc(name)}</h2><div class="form" style="margin-top:10px">${field('FY2026 award',`<input id="s_award" type="number" step="1000" data-s="fy2026_award" value="${st.fy2026_award??''}">`,'From the CMS award announcement')}${field('Verified against CMS',`<select id="s_ver" data-s="award_verified"><option value="0"${!st.award_verified?' selected':''}>Not verified</option><option value="1"${st.award_verified?' selected':''}>Verified</option></select>`)}${field('Lead agency',`<input id="s_agency" data-s="lead_agency" value="${esc(st.lead_agency)}" placeholder="State Medicaid agency, health department, office of rural health">`)}${field('Program contact email',`<input id="s_email" data-s="contact_email" value="${esc(st.contact_email)}">`)}${field('Program page',`<input id="s_url" data-s="program_url" value="${esc(st.program_url)}" placeholder="https://">`,'',true)}${field('Provider application opens',`<input id="s_open" type="date" data-s="provider_application_open" value="${esc(st.provider_application_open)}">`)}${field('Provider application due',`<input id="s_due" type="date" data-s="provider_application_due" value="${esc(st.provider_application_due)}">`)}${field('Notes',`<textarea id="s_notes" data-s="notes">${esc(st.notes)}</textarea>`,'Caps the state passes down, match requirements, portal quirks, TA sessions',true)}</div>
+    <div class="actions" style="margin-top:10px">${st.program_url?`<a class="btn" href="${esc(st.program_url)}" target="_blank" rel="noreferrer">Open program page</a>`:''}${st.provider_application_due?`<span class="small muted">Due ${fmtDate(st.provider_application_due)}</span>`:''}<span class="small muted">Saves as you type</span></div></div>`:''}</div>
+    <div class="card"><h3>Awards entered so far</h3><p class="small muted" style="margin-top:4px">Only figures confirmed in public reporting were pre-filled (Texas and New Jersey, the high and low). Enter the rest from the CMS award list as you confirm them.</p><table style="margin-top:8px"><tbody>${known.map(([a,n])=>`<tr><td>${esc(n)}</td><td class="num">${money(S.states[a].fy2026_award)}</td><td>${badge(S.states[a].award_verified?'Verified':'Unverified',S.states[a].award_verified?'green':'amber')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+// ---------- events ----------
+const formData=(f)=>Object.fromEntries(new FormData(f).entries());
+document.addEventListener('click',(e)=>{
+  const el=e.target.closest('[data-go],[data-phase],[data-nar],[data-sec],[data-comp],[data-prog],[data-act],[data-c],[data-b],[data-r],[data-m],[data-l],[data-d]');if(!el)return;
+  if(el.dataset.go){e.preventDefault();go(el.dataset.go);return;}
+  if(el.dataset.phase){ui.phase=el.dataset.phase;render();return;}
+  if(el.dataset.nar){ui.narTab=el.dataset.nar;render();return;}
+  if(el.dataset.sec){ui.section=el.dataset.sec;render();return;}
+  if(el.dataset.comp){ui.compTab=el.dataset.comp;render();return;}
+  if(el.dataset.prog){ui.progTab=el.dataset.prog;render();return;}
+  const id=Number(el.closest('[data-id]')?.dataset.id);
+  if(el.dataset.c==='delete'&&confirm('Delete this item?')){S.checklist=S.checklist.filter(c=>c.id!==id);commit('Deleted checklist item');render();return;}
+  if(el.dataset.b==='edit'){ui.editBudget={...S.budget.find(b=>b.id===id)};render();window.scrollTo({top:0,behavior:'smooth'});return;}
+  if(el.dataset.b==='delete'&&confirm('Delete this line?')){S.budget=S.budget.filter(b=>b.id!==id);commit('Deleted budget line');render();return;}
+  if(el.dataset.r==='delete'&&confirm('Delete this report?')){S.reports=S.reports.filter(r=>r.id!==id);commit('Deleted report');render();return;}
+  if(el.dataset.m==='delete'&&confirm('Delete this milestone?')){S.milestones=S.milestones.filter(m=>m.id!==id);commit('Deleted milestone');render();return;}
+  if(el.dataset.l==='delete'&&confirm('Delete this entry?')){S.ledger=S.ledger.filter(x=>x.id!==id);commit('Deleted ledger entry');render();return;}
+  if(el.dataset.d==='delete'&&confirm('Delete this document?')){S.documents=S.documents.filter(x=>x.id!==id);commit('Deleted document');render();return;}
+  const act=el.dataset.act;if(!act)return;
+  if(act==='toggle-add'){ui.showAdd[el.dataset.k]=!ui.showAdd[el.dataset.k];render();}
+  else if(act==='cancel-edit'){ui.editBudget=null;render();}
+  else if(act==='export-md')exportPacket();
+  else if(act==='export-csv')exportCsv();
+  else if(act==='export-json')download(`rhtp-backup-${today()}.json`,JSON.stringify(S,null,2),'application/json');
+  else if(act==='reset'){if(confirm('Erase everything in this browser and start with a blank hospital? Export a backup first if you need one.')){S=freshState();commit('Reset');go('profile');}}
+  else if(act==='gen-one'){const sec=S.sections[ui.section];if(sec.content.trim()&&!confirm('Replace the current text with a fresh draft?'))return;sec.content=draftSection(ui.section);if(sec.status==='empty')sec.status='draft';const ph=(sec.content.match(/\[[^\]]+\]/g)||[]).length;commit(`Drafted ${SECTIONS.find(s=>s[0]===ui.section)[1]}`);render();toast(ph?`Draft generated with ${ph} placeholder${ph>1?'s':''} to fill`:'Draft generated');}
+  else if(act==='gen-all'){if(!confirm('Generate drafts for every section that is still empty?'))return;let n=0;for(const [k] of SECTIONS){if(!S.sections[k].content.trim()){S.sections[k].content=draftSection(k);S.sections[k].status='draft';n++;}}commit(`Drafted ${n} sections`);render();toast(`${n} draft${n===1?'':'s'} generated`);}
+  else if(act==='save-section'){S.sections[ui.section].content=document.getElementById('sec_'+ui.section).value;if(S.sections[ui.section].status==='empty'&&S.sections[ui.section].content.trim())S.sections[ui.section].status='draft';commit(`Saved ${SECTIONS.find(s=>s[0]===ui.section)[1]}`);render();toast('Saved');}
+  else if(act==='gen-reports'){const start=S.hospital.project_start;if(!start){toast('Set the project start date on the Profile tab first');return;}let n=0;for(const [title,type,days] of DEFAULT_REPORTS){if(S.reports.some(r=>r.title===title))continue;const d=new Date(start+'T00:00:00');const pe=new Date(d);pe.setDate(pe.getDate()+days-1);const due=new Date(pe);due.setDate(due.getDate()+30);const ps=new Date(d);ps.setDate(ps.getDate()+Math.max(0,days-90));S.reports.push({id:nid(),title,report_type:type,period_start:(type==='performance'||days===365?start:ps.toISOString().slice(0,10)),period_end:pe.toISOString().slice(0,10),due_date:due.toISOString().slice(0,10),status:'upcoming',submitted_at:'',submitted_by:'',evidence_link:'',notes:'Default schedule, 30 days after period end. Replace with the dates in your state agreement.'});n++;}commit(`Generated ${n} report deadlines`);render();toast(n?'Default schedule added':'Default schedule already present');}
+});
+document.addEventListener('submit',(e)=>{
+  const f=e.target.closest('form[data-form]');if(!f)return;e.preventDefault();const d=formData(f);const kind=f.dataset.form;
+  if(kind==='check'){S.checklist.push({id:nid(),phase:ui.phase,category:d.category||'State specific',title:d.title,description:d.description||'',is_required:0,status:'not_started',owner:d.owner||'',due_date:d.due_date||'',evidence_link:'',notes:''});ui.showAdd.check=false;commit(`Added checklist item: ${d.title}`);}
+  else if(kind==='budget'){const line={category_code:d.category_code,cost_type:d.cost_type,line_item:d.line_item,justification:d.justification||''};YEARS.forEach(y=>line['year'+y]=Number(d['year'+y]||0));if(ui.editBudget){Object.assign(S.budget.find(b=>b.id===ui.editBudget.id),line);commit(`Updated budget line: ${d.line_item}`);ui.editBudget=null;}else{S.budget.push({id:nid(),...line});commit(`Added budget line: ${d.line_item}`);}}
+  else if(kind==='report'){S.reports.push({id:nid(),title:d.title,report_type:d.report_type,period_start:d.period_start||'',period_end:d.period_end||'',due_date:d.due_date,status:'upcoming',submitted_at:'',submitted_by:'',evidence_link:'',notes:d.notes||''});ui.showAdd.report=false;commit(`Added report: ${d.title}`);}
+  else if(kind==='ms'){S.milestones.push({id:nid(),title:d.title,description:d.description||'',category_code:d.category_code||'',owner:d.owner||'',due_date:d.due_date||'',status:'planned',metric:d.metric||'',target_value:d.target_value||'',actual_value:''});ui.showAdd.ms=false;commit(`Added milestone: ${d.title}`);}
+  else if(kind==='ledger'){S.ledger.push({id:nid(),entry_date:d.entry_date,direction:d.direction,amount:Number(d.amount),category_code:d.direction==='drawdown'?'':d.category_code,cost_type:d.cost_type,description:d.description||'',vendor:d.vendor||'',invoice_ref:d.invoice_ref||'',doc_link:d.doc_link||''});commit(`Recorded ${d.direction} of ${money(d.amount)}`);}
+  else if(kind==='doc'){S.documents.push({id:nid(),title:d.title,doc_type:d.doc_type,external_link:d.external_link,notes:d.notes||'',created_at:today()});commit(`Added document: ${d.title}`);}
+  render();toast('Saved');
+});
+let saveT;const debounced=(fn)=>{clearTimeout(saveT);saveT=setTimeout(fn,500);};
+document.addEventListener('input',(e)=>{
+  const el=e.target;
+  if(el.dataset.h!==undefined){const k=el.dataset.h;S.hospital[k]=el.type==='number'?Number(el.value||0):el.value;S.sample=false;debounced(()=>{save();renderNav();});return;}
+  if(el.dataset.q!==undefined){S.answers[el.dataset.q]=el.value;debounced(save);return;}
+  if(el.dataset.s!==undefined){const code=ui.stateCode||S.hospital.state;const st=S.states[code];if(!st)return;const k=el.dataset.s;st[k]=k==='fy2026_award'?(el.value===''?null:Number(el.value)):k==='award_verified'?Number(el.value):el.value;debounced(save);return;}
+  if(el.id&&el.id.startsWith('sec_')){const wc=words(el.value),lim=S.sections[ui.section].word_limit,ph=(el.value.match(/\[[^\]]+\]/g)||[]).length;const w=document.getElementById('wc');w.textContent=`${wc} / ${lim} words${ph?` · ${ph} placeholder${ph>1?'s':''} in brackets`:''}`;w.className=`small ${wc>lim?'ph':'muted'}`;}
+});
+document.addEventListener('change',(e)=>{
+  const el=e.target;const id=Number(el.closest('[data-id]')?.dataset.id);
+  if(el.id==='import-json'){const f=el.files[0];if(!f)return;f.text().then(t=>{try{const obj=JSON.parse(t);if(!obj.hospital||!obj.checklist)throw 0;S=obj;S.sample=false;save();render();toast('Backup imported');}catch{toast('That file is not an RHTP Navigator backup');}});return;}
+  if(el.dataset.act==='hide-done'){ui.hideDone=el.checked;render();return;}
+  if(el.dataset.act==='pick-state'){ui.stateCode=el.value;render();return;}
+  if(el.dataset.act==='sec-status'){S.sections[ui.section].status=el.value;commit();render();return;}
+  if(el.dataset.act==='sec-limit'){S.sections[ui.section].word_limit=Number(el.value)||0;commit();render();return;}
+  if(el.dataset.c){const c=S.checklist.find(x=>x.id===id);if(!c)return;if(el.dataset.c==='toggle'){c.status=el.checked?'complete':'in_progress';commit(`${el.checked?'Completed':'Reopened'}: ${c.title}`);render();}else{c[el.dataset.c]=el.value;if(el.dataset.c==='status'){commit(`${label(el.value)}: ${c.title}`);render();}else save();}return;}
+  if(el.dataset.r){const r=S.reports.find(x=>x.id===id);if(!r)return;r[el.dataset.r]=el.value;if(el.dataset.r==='status'&&el.value==='submitted'&&!r.submitted_at)r.submitted_at=today();if(el.dataset.r==='status'){commit(`${label(el.value)}: ${r.title}`);render();}else save();return;}
+  if(el.dataset.m){const m=S.milestones.find(x=>x.id===id);if(!m)return;m[el.dataset.m]=el.value;if(el.dataset.m==='status'){commit(`${label(el.value)}: ${m.title}`);render();}else save();return;}
+});
+
+load();render();
+</script>
