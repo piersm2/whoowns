@@ -1,0 +1,10 @@
+{
+  "name": "RHTP Navigator",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:22",
+  "postCreateCommand": "npm install && npm run seed && npm run build",
+  "postStartCommand": "npm start",
+  "forwardPorts": [3001],
+  "portsAttributes": {
+    "3001": { "label": "RHTP Navigator", "onAutoForward": "openBrowser" }
+  }
+}
