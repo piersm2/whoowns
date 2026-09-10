@@ -26,11 +26,11 @@ export function documentsRouter(db, uploadDir) {
   const r = Router();
 
   r.get('/', (req, res) => {
-    const where = [];
-    const params = [];
+    const where = ['hospital_id = ?'];
+    const params = [req.hid];
     if (req.query.related_table) { where.push('related_table = ?'); params.push(req.query.related_table); }
     if (req.query.related_id) { where.push('related_id = ?'); params.push(req.query.related_id); }
-    res.json(db.prepare(`SELECT * FROM document${where.length ? ` WHERE ${where.join(' AND ')}` : ''} ORDER BY id DESC`).all(...params));
+    res.json(db.prepare(`SELECT * FROM document WHERE ${where.join(' AND ')} ORDER BY id DESC`).all(...params));
   });
 
   r.post('/', upload.single('file'), (req, res) => {
@@ -42,24 +42,24 @@ export function documentsRouter(db, uploadDir) {
     const d = parsed.data;
     const f = req.file;
     if (!f && !d.external_link) return res.status(400).json({ error: 'Attach a file or provide an external link' });
-    const info = db.prepare('INSERT INTO document (title, doc_type, original_name, stored_name, mime_type, size_bytes, external_link, related_table, related_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
-      .run(d.title, d.doc_type, f?.originalname ?? '', f?.filename ?? '', f?.mimetype ?? '', f?.size ?? 0, d.external_link, d.related_table, d.related_id, d.notes);
-    logActivity(db, 'document', info.lastInsertRowid, 'create', d.title);
+    const info = db.prepare('INSERT INTO document (hospital_id, title, doc_type, original_name, stored_name, mime_type, size_bytes, external_link, related_table, related_id, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(req.hid, d.title, d.doc_type, f?.originalname ?? '', f?.filename ?? '', f?.mimetype ?? '', f?.size ?? 0, d.external_link, d.related_table, d.related_id, d.notes);
+    logActivity(db, 'document', info.lastInsertRowid, 'create', d.title, req.hid);
     res.status(201).json(db.prepare('SELECT * FROM document WHERE id = ?').get(info.lastInsertRowid));
   });
 
   r.get('/:id/file', (req, res) => {
-    const doc = db.prepare('SELECT * FROM document WHERE id = ?').get(req.params.id);
+    const doc = db.prepare('SELECT * FROM document WHERE id = ? AND hospital_id = ?').get(req.params.id, req.hid);
     if (!doc || !doc.stored_name) return res.status(404).json({ error: 'Not found' });
     res.download(path.join(uploadDir, doc.stored_name), doc.original_name || doc.stored_name);
   });
 
   r.delete('/:id', (req, res) => {
-    const doc = db.prepare('SELECT * FROM document WHERE id = ?').get(req.params.id);
+    const doc = db.prepare('SELECT * FROM document WHERE id = ? AND hospital_id = ?').get(req.params.id, req.hid);
     if (!doc) return res.status(404).json({ error: 'Not found' });
     if (doc.stored_name) fs.rmSync(path.join(uploadDir, doc.stored_name), { force: true });
     db.prepare('DELETE FROM document WHERE id = ?').run(req.params.id);
-    logActivity(db, 'document', req.params.id, 'delete', doc.title);
+    logActivity(db, 'document', req.params.id, 'delete', doc.title, req.hid);
     res.status(204).end();
   });
 

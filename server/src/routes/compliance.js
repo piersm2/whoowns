@@ -40,30 +40,30 @@ export function complianceRouter(db) {
 
   // Seed a default reporting calendar from the project start date (or award date).
   r.post('/reports/generate-defaults', (req, res) => {
-    const h = db.prepare('SELECT project_start, award_date FROM hospital WHERE id = 1').get();
+    const h = db.prepare('SELECT project_start, award_date FROM hospital WHERE id = ?').get(req.hid);
     const start = req.body?.start || h.project_start || h.award_date;
     if (!start) return res.status(400).json({ error: 'Set a project start or award date on the Profile tab first' });
-    const ins = db.prepare('INSERT INTO report_deadline (title, report_type, period_start, period_end, due_date, notes) VALUES (?, ?, ?, ?, ?, ?)');
+    const ins = db.prepare('INSERT INTO report_deadline (hospital_id, title, report_type, period_start, period_end, due_date, notes) VALUES (?, ?, ?, ?, ?, ?, ?)');
     const created = [];
     const tx = db.transaction(() => {
       for (const [title, type, offset] of DEFAULT_REPORTS) {
         const periodEnd = addDays(start, offset);
         const due = addDays(periodEnd, 30);
-        const info = ins.run(title, type, addDays(periodEnd, -89), periodEnd, due, 'Default schedule. Replace with the dates in your state agreement.');
+        const info = ins.run(req.hid, title, type, addDays(periodEnd, -89), periodEnd, due, 'Default schedule. Replace with the dates in your state agreement.');
         created.push(info.lastInsertRowid);
       }
     });
     tx();
-    logActivity(db, 'report_deadline', '', 'generate-defaults', `${created.length} reports from ${start}`);
-    res.status(201).json(db.prepare('SELECT * FROM report_deadline ORDER BY due_date, id').all());
+    logActivity(db, 'report_deadline', '', 'generate-defaults', `${created.length} reports from ${start}`, req.hid);
+    res.status(201).json(db.prepare('SELECT * FROM report_deadline WHERE hospital_id = ? ORDER BY due_date, id').all(req.hid));
   });
 
   r.get('/ledger-summary', (req, res) => {
-    const rows = db.prepare('SELECT direction, category_code, cost_type, SUM(amount) AS total FROM fund_ledger GROUP BY direction, category_code, cost_type').all();
-    const hospital = db.prepare('SELECT awarded_amount FROM hospital WHERE id = 1').get();
+    const rows = db.prepare('SELECT direction, category_code, cost_type, SUM(amount) AS total FROM fund_ledger WHERE hospital_id = ? GROUP BY direction, category_code, cost_type').all(req.hid);
+    const hospital = db.prepare('SELECT awarded_amount FROM hospital WHERE id = ?').get(req.hid);
     const drawn = rows.filter((x) => x.direction === 'drawdown').reduce((s, x) => s + x.total, 0);
     const spent = rows.filter((x) => x.direction === 'expenditure').reduce((s, x) => s + x.total, 0);
-    const budget = db.prepare('SELECT category_code, SUM(year1+year2+year3+year4+year5) AS total FROM budget_line GROUP BY category_code').all();
+    const budget = db.prepare('SELECT category_code, SUM(year1+year2+year3+year4+year5) AS total FROM budget_line WHERE hospital_id = ? GROUP BY category_code').all(req.hid);
     const byCategory = {};
     for (const b of budget) byCategory[b.category_code] = { budget: b.total, spent: 0 };
     for (const x of rows.filter((x) => x.direction === 'expenditure')) {

@@ -8,10 +8,18 @@ export class ApiError extends Error {
   }
 }
 
+const HOSPITAL_KEY = 'rhtp.hospitalId';
+export const currentHospitalId = () => { try { return localStorage.getItem(HOSPITAL_KEY) || ''; } catch { return ''; } };
+export const setCurrentHospitalId = (id: number | string) => { try { localStorage.setItem(HOSPITAL_KEY, String(id)); } catch { /* storage blocked */ } };
+
 async function request<T>(method: string, url: string, body?: unknown): Promise<T> {
+  const hid = currentHospitalId();
   const res = await fetch(`/api${url}`, {
     method,
-    headers: body instanceof FormData || body === undefined ? {} : { 'content-type': 'application/json' },
+    headers: {
+      ...(body instanceof FormData || body === undefined ? {} : { 'content-type': 'application/json' }),
+      ...(hid ? { 'x-hospital-id': hid } : {}),
+    },
     body: body instanceof FormData ? body : body === undefined ? undefined : JSON.stringify(body),
   });
   if (res.status === 204) return undefined as T;

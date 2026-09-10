@@ -133,6 +133,26 @@ export const DEFAULT_REPORTS = [
   ['Annual financial report, Year 1', 'financial', 365],
 ];
 
+// Checklist and narrative sections are created per hospital so each one tracks its own work.
+export function seedHospitalDefaults(db, hospitalId) {
+  const hasChecklist = db.prepare('SELECT COUNT(*) AS n FROM checklist_item WHERE hospital_id = ?').get(hospitalId).n;
+  if (!hasChecklist) {
+    const ins = db.prepare('INSERT INTO checklist_item (hospital_id, phase, category, title, description, is_required, sort_order) VALUES (?, ?, ?, ?, ?, ?, ?)');
+    CHECKLIST.forEach(([phase, cat, title, desc, req], i) => ins.run(hospitalId, phase, cat, title, desc, req, i));
+  }
+  const insSec = db.prepare('INSERT OR IGNORE INTO narrative_section (hospital_id, key, title, guidance, word_limit, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
+  NARRATIVE_SECTIONS.forEach(([key, title, guidance, limit], i) => insSec.run(hospitalId, key, title, guidance, limit, i));
+}
+
+export function createHospital(db, fields = {}) {
+  const keys = Object.keys(fields);
+  const info = keys.length
+    ? db.prepare(`INSERT INTO hospital (${keys.join(', ')}) VALUES (${keys.map(() => '?').join(', ')})`).run(...keys.map((k) => fields[k]))
+    : db.prepare('INSERT INTO hospital DEFAULT VALUES').run();
+  seedHospitalDefaults(db, info.lastInsertRowid);
+  return db.prepare('SELECT * FROM hospital WHERE id = ?').get(info.lastInsertRowid);
+}
+
 export function seed(db) {
   const hasHospital = db.prepare('SELECT COUNT(*) AS n FROM hospital').get().n;
   if (!hasHospital) db.prepare('INSERT INTO hospital (id) VALUES (1)').run();
@@ -149,15 +169,8 @@ export function seed(db) {
   const insState = db.prepare('INSERT OR IGNORE INTO state_allocation (state, state_name, fy2026_award, award_verified) VALUES (?, ?, ?, ?)');
   STATES.forEach(([abbr, name]) => insState.run(abbr, name, KNOWN_AWARDS[abbr] ?? null, KNOWN_AWARDS[abbr] ? 1 : 0));
 
-  const checklistCount = db.prepare('SELECT COUNT(*) AS n FROM checklist_item').get().n;
-  if (!checklistCount) {
-    const ins = db.prepare('INSERT INTO checklist_item (phase, category, title, description, is_required, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
-    CHECKLIST.forEach(([phase, cat, title, desc, req], i) => ins.run(phase, cat, title, desc, req, i));
-  }
-
   const insQ = db.prepare('INSERT OR IGNORE INTO intake_question (key, section_key, prompt, help, input_type, sort_order) VALUES (?, ?, ?, ?, ?, ?)');
   INTAKE_QUESTIONS.forEach(([key, sec, prompt, help, type], i) => insQ.run(key, sec, prompt, help, type, i));
 
-  const insSec = db.prepare('INSERT OR IGNORE INTO narrative_section (key, title, guidance, word_limit, sort_order) VALUES (?, ?, ?, ?, ?)');
-  NARRATIVE_SECTIONS.forEach(([key, title, guidance, limit], i) => insSec.run(key, title, guidance, limit, i));
+  for (const { id } of db.prepare('SELECT id FROM hospital').all()) seedHospitalDefaults(db, id);
 }

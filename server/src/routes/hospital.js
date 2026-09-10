@@ -1,30 +1,19 @@
 import { Router } from 'express';
-import { z } from 'zod';
 import { logActivity } from '../lib/db.js';
-import { str, num, dateStr } from '../lib/crud.js';
-
-const HospitalSchema = z.object({
-  name: str(200), ccn: str(20), state: str(2), county: str(100),
-  facility_type: z.enum(['CAH', 'REH', 'SCH', 'RRC', 'MDH', 'PPS', 'RHC', 'FQHC', 'OTHER']).default('CAH'),
-  licensed_beds: num(), service_area_population: num(),
-  contact_name: str(200), contact_title: str(200), contact_email: str(200), contact_phone: str(50),
-  fiscal_year_end: str(5), uei: str(20), sam_expiration: dateStr(),
-  requested_amount: num(), awarded_amount: num(), award_date: dateStr(), project_start: dateStr(), project_end: dateStr(),
-  notes: str(),
-}).partial();
+import { HospitalSchema } from './hospitals.js';
 
 export function hospitalRouter(db) {
   const r = Router();
-  r.get('/', (req, res) => res.json(db.prepare('SELECT * FROM hospital WHERE id = 1').get()));
+  r.get('/', (req, res) => res.json(db.prepare('SELECT * FROM hospital WHERE id = ?').get(req.hid)));
   r.patch('/', (req, res) => {
     const parsed = HospitalSchema.safeParse(req.body);
     if (!parsed.success) return res.status(400).json({ error: 'Invalid input', issues: parsed.error.issues });
     const keys = Object.keys(parsed.data);
     if (keys.length) {
-      db.prepare(`UPDATE hospital SET ${keys.map((k) => `${k} = ?`).join(', ')}, updated_at = datetime('now') WHERE id = 1`).run(...keys.map((k) => parsed.data[k]));
-      logActivity(db, 'hospital', 1, 'update', keys.join(','));
+      db.prepare(`UPDATE hospital SET ${keys.map((k) => `${k} = ?`).join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...keys.map((k) => parsed.data[k]), req.hid);
+      logActivity(db, 'hospital', req.hid, 'update', keys.join(','), req.hid);
     }
-    res.json(db.prepare('SELECT * FROM hospital WHERE id = 1').get());
+    res.json(db.prepare('SELECT * FROM hospital WHERE id = ?').get(req.hid));
   });
   return r;
 }
@@ -38,8 +27,9 @@ function daysUntil(dateStr) {
 export function dashboardRouter(db) {
   const r = Router();
   r.get('/', (req, res) => {
-    const hospital = db.prepare('SELECT * FROM hospital WHERE id = 1').get();
-    const checklist = db.prepare('SELECT phase, status, is_required, title, due_date, owner FROM checklist_item').all();
+    const hid = req.hid;
+    const hospital = db.prepare('SELECT * FROM hospital WHERE id = ?').get(hid);
+    const checklist = db.prepare('SELECT id, phase, status, is_required, title, due_date, owner FROM checklist_item WHERE hospital_id = ?').all(hid);
     const phases = {};
     for (const c of checklist) {
       const p = (phases[c.phase] ??= { total: 0, complete: 0, blocked: 0, required_open: 0 });
@@ -53,16 +43,16 @@ export function dashboardRouter(db) {
     const overdue = checklist.filter((c) => c.due_date && c.due_date < today && !['complete', 'na'].includes(c.status));
     const upcomingChecklist = checklist.filter((c) => c.due_date && c.due_date >= today && !['complete', 'na'].includes(c.status)).sort((a, b) => a.due_date.localeCompare(b.due_date)).slice(0, 5);
 
-    const sections = db.prepare('SELECT key, title, status, content, word_limit FROM narrative_section ORDER BY sort_order').all();
+    const sections = db.prepare('SELECT key, title, status, content, word_limit FROM narrative_section WHERE hospital_id = ? ORDER BY sort_order').all(hid);
     const narrative = { total: sections.length, drafted: sections.filter((s) => s.status !== 'empty').length, final: sections.filter((s) => s.status === 'final').length };
 
-    const budget = db.prepare('SELECT COALESCE(SUM(year1+year2+year3+year4+year5),0) AS total, COUNT(*) AS lines FROM budget_line').get();
-    const ledger = db.prepare("SELECT direction, COALESCE(SUM(amount),0) AS total FROM fund_ledger GROUP BY direction").all();
+    const budget = db.prepare('SELECT COALESCE(SUM(year1+year2+year3+year4+year5),0) AS total, COUNT(*) AS lines FROM budget_line WHERE hospital_id = ?').get(hid);
+    const ledger = db.prepare('SELECT direction, COALESCE(SUM(amount),0) AS total FROM fund_ledger WHERE hospital_id = ? GROUP BY direction').all(hid);
     const drawn = ledger.find((l) => l.direction === 'drawdown')?.total ?? 0;
     const spent = ledger.find((l) => l.direction === 'expenditure')?.total ?? 0;
 
-    const reports = db.prepare("SELECT * FROM report_deadline WHERE status IN ('upcoming','in_progress','late') ORDER BY due_date").all();
-    const milestones = db.prepare("SELECT * FROM milestone WHERE status != 'complete' ORDER BY due_date").all();
+    const reports = db.prepare("SELECT * FROM report_deadline WHERE hospital_id = ? AND status IN ('upcoming','in_progress','late') ORDER BY due_date").all(hid);
+    const milestones = db.prepare("SELECT * FROM milestone WHERE hospital_id = ? AND status != 'complete' ORDER BY due_date").all(hid);
     const lateReports = reports.filter((x) => x.due_date < today);
 
     const alerts = [];
@@ -88,7 +78,7 @@ export function dashboardRouter(db) {
       reports: reports.slice(0, 5).map((x) => ({ ...x, days: daysUntil(x.due_date) })),
       milestones: milestones.slice(0, 5).map((x) => ({ ...x, days: daysUntil(x.due_date) })),
       alerts,
-      recent: db.prepare('SELECT * FROM activity_log ORDER BY id DESC LIMIT 10').all(),
+      recent: db.prepare('SELECT * FROM activity_log WHERE hospital_id = ? ORDER BY id DESC LIMIT 10').all(hid),
     });
   });
   return r;

@@ -118,3 +118,17 @@ tr.total td { font-weight: 650; border-top: 2px solid var(--border); }
 details summary { cursor: pointer; font-weight: 550; }
 .two-col { columns: 2; column-gap: 24px; }
 @media (max-width: 800px) { .two-col { columns: 1; } .main { padding: 16px; } .shell { flex-direction: column; } .sidebar { width: auto; flex: none; height: auto; position: static; flex-direction: row; flex-wrap: wrap; } .sidebar .foot, .brand span { display: none; } }
+
+.switcher { padding: 0 6px 10px; position: relative; }
+.switcher input { width: 100%; font-size: 0.86rem; padding: 7px 9px; }
+.switcher .current { display: block; font-size: 0.8rem; color: var(--muted); padding: 0 4px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.switcher .current strong { display: block; color: var(--text); font-size: 0.9rem; white-space: normal; }
+.switcher .results { position: absolute; left: 6px; right: 6px; z-index: 20; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12); max-height: 320px; overflow: auto; }
+.switcher .results button { all: unset; display: block; width: 100%; box-sizing: border-box; padding: 8px 10px; cursor: pointer; font-size: 0.86rem; border-bottom: 1px solid var(--border); }
+.switcher .results button:hover, .switcher .results button.on { background: var(--primary-soft); }
+.switcher .results button:last-child { border-bottom: 0; }
+.switcher .results .ids { font-size: 0.74rem; color: var(--muted); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+.switcher .results .empty { padding: 10px; font-size: 0.84rem; color: var(--muted); }
+.ids-inline { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.82rem; color: var(--muted); }
+.hit { display: flex; justify-content: space-between; gap: 10px; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.hit:last-child { border-bottom: 0; }

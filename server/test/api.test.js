@@ -132,3 +132,79 @@ test('documents accept links and reject empty', async () => {
   const del = await fetch(`${base}/documents/${doc.id}`, { method: 'DELETE' });
   assert.equal(del.status, 204);
 });
+
+test('hospitals: create, filter by PTAN, NPI, TIN, switch scope, delete', async () => {
+  const created = await json('POST', '/hospitals', { name: 'Pine Ridge District Hospital', ccn: '271305', ptan: '271305', npi: '1987654321', tin: '81-1234567', state: 'MT' });
+  assert.equal(created.status, 201);
+  const id = created.body.id;
+  // New hospital gets its own checklist and sections, separate from hospital 1.
+  const scoped = await fetch(`${base}/checklist`, { headers: { 'x-hospital-id': String(id) } });
+  const items = await scoped.json();
+  assert.ok(items.length > 30);
+  assert.ok(items.every((c) => c.hospital_id === id && c.status === 'not_started'));
+  const sections = await (await fetch(`${base}/narrative/sections`, { headers: { 'x-hospital-id': String(id) } })).json();
+  assert.equal(sections.length, 9);
+  assert.equal(sections.find((x) => x.key === 'need').status, 'empty');
+  // Hospital 1 (Test CAH) still has its drafted need section.
+  const first = (await json('GET', '/narrative/sections')).body;
+  assert.equal(first.find((x) => x.key === 'need').status, 'draft');
+  // Filter by each identifier, including a formatted TIN.
+  assert.equal((await json('GET', '/hospitals?q=271305')).body.length, 1);
+  assert.equal((await json('GET', '/hospitals?q=1987654321')).body[0].name, 'Pine Ridge District Hospital');
+  assert.equal((await json('GET', '/hospitals?q=81-1234567')).body.length, 1);
+  assert.equal((await json('GET', '/hospitals?q=811234567')).body.length, 1);
+  assert.equal((await json('GET', '/hospitals?q=pine')).body.length, 1);
+  assert.equal((await json('GET', '/hospitals?q=zzz')).body.length, 0);
+  assert.equal((await json('GET', '/hospitals')).body.length, 2);
+  // Scoped dashboard reads the selected hospital.
+  const dash = await (await fetch(`${base}/dashboard?hospital=${id}`)).json();
+  assert.equal(dash.hospital.name, 'Pine Ridge District Hospital');
+  assert.equal(dash.budget.lines, 0);
+  // Directory search with remote lookups off returns saved matches and the caveat note.
+  const dir = (await json('GET', '/directory/search?q=271305&remote=0')).body;
+  assert.equal(dir.hospitals.length, 1);
+  assert.equal(dir.remote, null);
+  assert.ok(dir.note.includes('TIN'));
+  // Delete cascades.
+  const del = await fetch(`${base}/hospitals/${id}`, { method: 'DELETE' });
+  assert.equal(del.status, 204);
+  const gone = await fetch(`${base}/checklist`, { headers: { 'x-hospital-id': String(id) } });
+  assert.ok((await gone.json()).every((c) => c.hospital_id !== id));
+  assert.equal((await json('GET', '/hospitals')).body.length, 1);
+});
+
+test('directory normalizes CMS and NPPES shapes and guesses facility type', async () => {
+  const { guessFacilityType, cacheResults, searchCache } = await import('../src/lib/directory.js');
+  assert.equal(guessFacilityType('Critical Access Hospitals'), 'CAH');
+  assert.equal(guessFacilityType('Acute Care Hospitals'), 'PPS');
+  assert.equal(guessFacilityType(''), 'OTHER');
+  const { openDatabase } = await import('../src/lib/db.js');
+  const db = openDatabase(':memory:');
+  cacheResults(db, [{ ccn: '010001', npi: '', name: 'SOUTHEAST HEALTH', address: '1 St', city: 'DOTHAN', state: 'AL', zip: '36301', county: 'HOUSTON', facility_kind: 'Acute Care Hospitals', source: 'care_compare' }]);
+  cacheResults(db, [{ ccn: '010001', npi: '', name: 'SOUTHEAST HEALTH MEDICAL CENTER', address: '1 St', city: 'DOTHAN', state: 'AL', zip: '36301', county: 'HOUSTON', facility_kind: 'Acute Care Hospitals', source: 'care_compare' }]);
+  const hits = searchCache(db, '010001');
+  assert.equal(hits.length, 1);
+  assert.equal(hits[0].name, 'SOUTHEAST HEALTH MEDICAL CENTER');
+});
+
+test('old single hospital databases migrate in place', async () => {
+  const Database = (await import('better-sqlite3')).default;
+  const file = path.join(tmp, 'legacy.db');
+  const legacy = new Database(file);
+  legacy.exec(`CREATE TABLE hospital (id INTEGER PRIMARY KEY CHECK (id = 1), name TEXT NOT NULL DEFAULT '', ccn TEXT NOT NULL DEFAULT '', state TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    INSERT INTO hospital (id, name, ccn, state) VALUES (1, 'Legacy CAH', '123456', 'IA');
+    CREATE TABLE budget_line (id INTEGER PRIMARY KEY AUTOINCREMENT, category_code TEXT NOT NULL DEFAULT 'J', cost_type TEXT NOT NULL DEFAULT 'other', line_item TEXT NOT NULL, justification TEXT NOT NULL DEFAULT '', year1 REAL NOT NULL DEFAULT 0, year2 REAL NOT NULL DEFAULT 0, year3 REAL NOT NULL DEFAULT 0, year4 REAL NOT NULL DEFAULT 0, year5 REAL NOT NULL DEFAULT 0, sort_order INTEGER NOT NULL DEFAULT 0, created_at TEXT NOT NULL DEFAULT (datetime('now')), updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    INSERT INTO budget_line (line_item, year1) VALUES ('Old line', 500);
+    CREATE TABLE narrative_section (key TEXT PRIMARY KEY, title TEXT NOT NULL, guidance TEXT NOT NULL DEFAULT '', word_limit INTEGER NOT NULL DEFAULT 500, content TEXT NOT NULL DEFAULT '', status TEXT NOT NULL DEFAULT 'empty', sort_order INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL DEFAULT (datetime('now')));
+    INSERT INTO narrative_section (key, title, content, status) VALUES ('need', 'Statement of Need', 'Kept text', 'draft');`);
+  legacy.close();
+  const db = openDatabase(file);
+  const h = db.prepare('SELECT * FROM hospital WHERE id = 1').get();
+  assert.equal(h.name, 'Legacy CAH');
+  assert.equal(h.ptan, '');
+  assert.equal(db.prepare('SELECT hospital_id, line_item FROM budget_line').get().hospital_id, 1);
+  assert.equal(db.prepare("SELECT content FROM narrative_section WHERE hospital_id = 1 AND key = 'need'").get().content, 'Kept text');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM narrative_section WHERE hospital_id = 1').get().n, 9);
+  assert.ok(db.prepare('SELECT COUNT(*) AS n FROM checklist_item WHERE hospital_id = 1').get().n > 30);
+  db.close();
+});

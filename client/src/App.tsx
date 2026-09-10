@@ -7,6 +7,8 @@ import Compliance from './pages/Compliance';
 import Program from './pages/Program';
 import Documents from './pages/Documents';
 import Profile from './pages/Profile';
+import Hospitals from './pages/Hospitals';
+import { HospitalSwitcher } from './components/HospitalSwitcher';
 import { ToastProvider } from './components/Toast';
 
 const NAV = [
@@ -18,6 +20,7 @@ const NAV = [
   ['/documents', '📁', 'Documents'],
   ['/program', '📚', 'Program'],
   ['/profile', '🏥', 'Profile'],
+  ['/hospitals', '🗂️', 'Hospitals'],
 ] as const;
 
 export default function App() {
@@ -29,6 +32,7 @@ export default function App() {
             <strong>RHTP Navigator</strong>
             <span>Rural Health Transformation Program</span>
           </div>
+          <HospitalSwitcher />
           <nav className="nav">
             {NAV.map(([to, icon, label]) => (
               <NavLink key={to} to={to} end={to === '/'}>
@@ -49,6 +53,7 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/program" element={<Program />} />
             <Route path="/profile" element={<Profile />} />
+            <Route path="/hospitals" element={<Hospitals />} />
           </Routes>
         </main>
       </div>

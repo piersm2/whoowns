@@ -1,5 +1,6 @@
 export interface Hospital {
-  id: 1; name: string; ccn: string; state: string; county: string; facility_type: string;
+  id: number; name: string; ccn: string; ptan: string; npi: string; tin: string;
+  address: string; city: string; zip: string; state: string; county: string; facility_type: string;
   licensed_beds: number; service_area_population: number;
   contact_name: string; contact_title: string; contact_email: string; contact_phone: string;
   fiscal_year_end: string; uei: string; sam_expiration: string;
@@ -57,4 +58,13 @@ export interface Dashboard {
   milestones: (Milestone & { days: number | null })[];
   alerts: { level: 'info' | 'warn' | 'danger'; text: string }[];
   recent: { id: number; entity: string; entity_id: string; action: string; detail: string; created_at: string }[];
+}
+
+export interface DirectoryHit {
+  id: number; ccn: string; ptan: string; npi: string; name: string; address: string; city: string; state: string; zip: string; county: string;
+  facility_kind: string; facility_type: string; source: string; fetched_at: string;
+}
+export interface DirectorySearch {
+  query: string; hospitals: Hospital[]; directory: DirectoryHit[];
+  remote: null | { ok: boolean; found?: number; note?: string; error?: string }; note: string;
 }

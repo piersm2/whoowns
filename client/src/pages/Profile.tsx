@@ -42,8 +42,14 @@ export default function Profile() {
         <div className="form-grid">
           <Field label="Hospital name" span2><input {...txt('name')} required /></Field>
           <Field label="CCN" help="Medicare provider number"><input {...txt('ccn')} /></Field>
+          <Field label="PTAN" help="Usually the same 6 digits as the CCN"><input {...txt('ptan')} /></Field>
+          <Field label="NPI" help="10 digits"><input {...txt('npi')} maxLength={10} /></Field>
+          <Field label="TIN" help="EIN"><input {...txt('tin')} placeholder="12-3456789" /></Field>
           <Field label="Facility type"><select value={form.facility_type ?? 'CAH'} onChange={set('facility_type')}>{FACILITY_TYPES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></Field>
           <Field label="State"><select value={form.state ?? ''} onChange={set('state')}><option value="">Select</option>{states?.map((s) => <option key={s.state} value={s.state}>{s.state_name}</option>)}</select></Field>
+          <Field label="Address"><input {...txt('address')} /></Field>
+          <Field label="City"><input {...txt('city')} /></Field>
+          <Field label="ZIP"><input {...txt('zip')} /></Field>
           <Field label="County"><input {...txt('county')} /></Field>
           <Field label="Licensed beds"><input {...num('licensed_beds')} /></Field>
           <Field label="Service area population"><input {...num('service_area_population')} /></Field>
