@@ -15,7 +15,8 @@ Background: CMS released the first $10 billion of the $50 billion program to sta
 | Compliance | Reporting calendar (auto-generate a default year one schedule), work plan milestones with metrics, and a fund ledger that reconciles drawdowns against expenditures and budget by category. |
 | Documents | Upload files or link to them. Award letter, assurances, CHNA, quotes, invoices, submitted reports. |
 | Program | Statute and program facts, the ten use-of-funds categories, and an editable record for your state (award, lead agency, portal, provider deadlines, caps the state passes down). |
-| Profile | Facility, contact, UEI and SAM, request and award amounts, project dates. |
+| Profile | Facility, PTAN, NPI, TIN, CCN, address, contact, UEI and SAM, request and award amounts, project dates. |
+| Hospitals | Track more than one hospital. Filter the list by PTAN, NPI, TIN, CCN, or name, open one to switch every tab to it, and look a hospital up in CMS (NPPES by NPI, Care Compare by CCN) to prefill a new record. |
 
 ## Run it in GitHub Codespaces (no install)
 
@@ -68,6 +69,18 @@ Runs the API test suite against an in-memory database.
 | --- | --- | --- |
 | `PORT` | 3001 | API and static client port |
 | `RHTP_DB_PATH` | `server/data/rhtp.db` | SQLite file location |
+
+## Finding hospitals by PTAN, NPI, or TIN
+
+The sidebar search and the Hospitals page filter saved hospitals by any identifier or name. Digits match with or without dashes, so `81-1234567` and `811234567` both find the same TIN.
+
+The Hospitals page can also search CMS to prefill a new record:
+
+- **NPI** (10 digits) queries the NPPES NPI Registry.
+- **CCN** (6 characters) queries the Care Compare hospital dataset on data.cms.gov. For hospitals the PTAN is normally the same number as the CCN, so a PTAN search runs as a CCN search.
+- **Name** (3 or more letters) searches Care Compare by facility name.
+
+CMS does not publish TINs or PTANs, so those only match hospitals you have saved. Results are cached in the local database. Set `RHTP_HOSPITAL_DATASET` if CMS changes the Care Compare dataset id (default `xubh-q36u`). The single file version has no network access and takes identifiers by hand.
 
 ## Data caveats
 

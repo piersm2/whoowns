@@ -114,6 +114,17 @@ ul.list li{display:flex;justify-content:space-between;gap:10px;padding:8px 0;bor
 ul.list li:last-child{border-bottom:0}
 .toast{position:fixed;bottom:18px;right:18px;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:6px;font-size:.88rem;box-shadow:var(--shadow);z-index:50;opacity:0;transition:opacity .2s}
 .toast.show{opacity:1}
+.switcher{padding:0 4px 10px;position:relative}
+.switcher .current{display:block;font-size:.76rem;color:var(--muted);padding:0 6px 6px;overflow:hidden;text-overflow:ellipsis}
+.switcher .current strong{display:block;color:var(--ink);font-size:.9rem}
+.switcher input{font-size:.84rem;padding:6px 9px}
+.switcher .results{position:absolute;left:4px;right:4px;z-index:30;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:var(--shadow);max-height:320px;overflow:auto}
+.switcher .results button{all:unset;display:block;width:100%;box-sizing:border-box;padding:8px 10px;cursor:pointer;font-size:.86rem;border-bottom:1px solid var(--line)}
+.switcher .results button:hover,.switcher .results button.on{background:var(--accent-soft)}
+.switcher .results .ids,.ids{font-family:var(--mono);font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
+.switcher .results .empty{padding:10px;font-size:.84rem;color:var(--muted)}
+.switcher .results .add{display:block;padding:8px 10px;font-size:.84rem}
+@media (max-width:760px){.switcher{width:100%;order:1}.switcher .current{display:none}}
 .question{display:grid;gap:4px;margin-bottom:16px}
 .question .q{font-weight:500}
 .question .h{font-size:.78rem;color:var(--muted)}
@@ -240,21 +251,25 @@ const YEARS=[1,2,3,4,5];
 const STATUS_TONE={not_started:'',in_progress:'blue',blocked:'red',complete:'green',na:'',planned:'',at_risk:'amber',upcoming:'',submitted:'blue',accepted:'green',late:'red',empty:'',draft:'blue',review:'amber',final:'green'};
 
 // ---------- state ----------
-const KEY='rhtp-navigator-v1';
-const blankHospital=()=>({name:'',ccn:'',state:'',county:'',facility_type:'CAH',licensed_beds:0,service_area_population:0,contact_name:'',contact_title:'',contact_email:'',contact_phone:'',fiscal_year_end:'',uei:'',sam_expiration:'',requested_amount:0,awarded_amount:0,award_date:'',project_start:'',project_end:'',notes:''});
-function freshState(){
+const KEY_V1='rhtp-navigator-v1';const KEY='rhtp-navigator-v2';
+const blankHospital=()=>({name:'',ccn:'',ptan:'',npi:'',tin:'',address:'',city:'',zip:'',state:'',county:'',facility_type:'CAH',licensed_beds:0,service_area_population:0,contact_name:'',contact_title:'',contact_email:'',contact_phone:'',fiscal_year_end:'',uei:'',sam_expiration:'',requested_amount:0,awarded_amount:0,award_date:'',project_start:'',project_end:'',notes:''});
+// One record per hospital. `S` always points at the hospital currently open; `DB` holds all of them.
+function freshHospital(id){
   return {
-    version:1,sample:false,hospital:blankHospital(),
+    id,sample:false,hospital:blankHospital(),
     checklist:CHECKLIST.map((c,i)=>({id:i+1,phase:c[0],category:c[1],title:c[2],description:c[3],is_required:c[4],status:'not_started',owner:'',due_date:'',evidence_link:'',notes:''})),
     answers:{},sections:Object.fromEntries(SECTIONS.map(s=>[s[0],{content:'',status:'empty',word_limit:s[3]}])),
-    budget:[],reports:[],milestones:[],ledger:[],documents:[],
-    states:Object.fromEntries(STATES.map(([a])=>[a,{fy2026_award:KNOWN_AWARDS[a]??null,award_verified:KNOWN_AWARDS[a]?1:0,lead_agency:'',contact_email:'',program_url:'',provider_application_open:'',provider_application_due:'',notes:''}])),
-    activity:[],nextId:1000
+    budget:[],reports:[],milestones:[],ledger:[],documents:[],activity:[]
   };
 }
-function sampleState(){
-  const s=freshState(); s.sample=true;
-  Object.assign(s.hospital,{name:'Sample Valley Community Hospital',ccn:'123456',state:'AL',county:'Sample',facility_type:'CAH',licensed_beds:25,service_area_population:18500,contact_name:'Jane Doe',contact_title:'CFO',contact_email:'cfo@example.org',uei:'ABC123DEF456',sam_expiration:'2027-03-15',requested_amount:2400000,notes:'Sample data. Replace with your hospital on the Profile tab.'});
+function freshDB(){
+  return {version:2,currentId:1,nextId:1000,
+    states:Object.fromEntries(STATES.map(([a])=>[a,{fy2026_award:KNOWN_AWARDS[a]??null,award_verified:KNOWN_AWARDS[a]?1:0,lead_agency:'',contact_email:'',program_url:'',provider_application_open:'',provider_application_due:'',notes:''}])),
+    hospitals:[freshHospital(1)]};
+}
+function sampleDB(){
+  const db=freshDB();const s=db.hospitals[0];s.sample=true;
+  Object.assign(s.hospital,{name:'Sample Valley Community Hospital',ccn:'011234',ptan:'011234',npi:'1234567893',tin:'63-0000000',city:'Sampleton',state:'AL',county:'Sample',facility_type:'CAH',licensed_beds:25,service_area_population:18500,contact_name:'Jane Doe',contact_title:'CFO',contact_email:'cfo@example.org',uei:'ABC123DEF456',sam_expiration:'2027-03-15',requested_amount:2400000,notes:'Sample data. Replace with your hospital on the Profile tab.'});
   s.answers={
     service_area:'We serve Sample County and the northern half of Neighbor County, about 18,500 residents. The next hospital is 47 miles away. Median age is 46 and 22 percent of residents live below the poverty line. Medicaid and self pay make up 38 percent of our volume.',
     health_challenges:'Our 2024 CHNA ranks diabetes, heart failure, and substance use as the top three. The county diabetes rate is 15.8 percent against a state rate of 12.9. There is no psychiatrist within 60 miles.',
@@ -264,7 +279,7 @@ function sampleState(){
     project_summary:'We want to hire two RN care managers to run a chronic care program for diabetes and heart failure patients, start tele-psychiatry in the ED and clinic, and upgrade our EHR so both can be documented and measured.',
     activities:'Hire two RN care managers\nDeploy 150 remote patient monitoring kits\nContract for tele-psychiatry coverage 7 days a week\nUpgrade EHR telehealth and remote monitoring modules\nCybersecurity assessment and remediation',
     people_served:'About 600 chronic disease patients per year in the care program and roughly 400 behavioral health encounters per year through tele-psychiatry.'};
-  const b=(cc,ct,li,j,...y)=>({id:s.nextId++,category_code:cc,cost_type:ct,line_item:li,justification:j,year1:y[0],year2:y[1],year3:y[2],year4:y[3],year5:y[4]});
+  const b=(cc,ct,li,j,...y)=>({id:db.nextId++,category_code:cc,cost_type:ct,line_item:li,justification:j,year1:y[0],year2:y[1],year3:y[2],year4:y[3],year5:y[4]});
   s.budget=[
     b('A','personnel','RN care managers (2.0 FTE)','Two RN care managers at $82,000 each plus 3 percent annual increase run the chronic care program.',164000,168920,174000,179000,184000),
     b('A','fringe','Fringe on care managers at 28 percent','Hospital standard fringe rate.',45920,47298,48720,50120,51520),
@@ -273,17 +288,51 @@ function sampleState(){
     b('F','contractual','EHR telehealth and RPM module upgrade','Vendor statement of work.',140000,24000,24000,24000,24000),
     b('F','contractual','Cybersecurity assessment and remediation','Third party assessment plus MFA and endpoint protection rollout.',95000,20000,20000,20000,20000)];
   s.checklist[0].status='complete'; s.checklist[1].status='in_progress'; s.checklist[1].owner='J. Doe'; s.checklist[2].status='complete';
-  return s;
+  const p=freshHospital(2);p.sample=true;
+  Object.assign(p.hospital,{name:'Pine Ridge District Hospital',ccn:'271305',ptan:'271305',npi:'1987654321',tin:'81-0000000',city:'Pine Ridge',state:'MT',county:'Pine',facility_type:'CAH',licensed_beds:18,notes:'Sample data.'});
+  db.hospitals.push(p);
+  return db;
 }
-let S;
+// Backups and older saves that held a single hospital become a one hospital database.
+function fillHospital(h,id){
+  const base=freshHospital(id);
+  return {...base,...h,id,hospital:{...blankHospital(),...(h.hospital||{})},sections:{...base.sections,...(h.sections||{})},answers:h.answers||{},activity:h.activity||[]};
+}
+function upgrade(obj){
+  if(!obj)return null;
+  const base=freshDB();
+  if(Array.isArray(obj.hospitals)){
+    const hospitals=obj.hospitals.map((h,i)=>fillHospital(h,h.id??i+1));
+    return {...base,...obj,hospitals,states:{...base.states,...(obj.states||{})},nextId:Math.max(obj.nextId||0,1000)};
+  }
+  if(obj.hospital&&obj.checklist){
+    const {states,nextId,version:_v,...rest}=obj;
+    return {...base,nextId:Math.max(nextId||0,1000),states:{...base.states,...(states||{})},hospitals:[fillHospital(rest,1)]};
+  }
+  return null;
+}
+let DB,S;
+function setCurrent(id){DB.currentId=id;S=DB.hospitals.find(h=>h.id===id)||DB.hospitals[0];DB.currentId=S.id;}
 function load(){
-  try{const raw=localStorage.getItem(KEY); if(raw){S=JSON.parse(raw); return;}}catch(e){}
-  S=sampleState();
+  try{
+    const raw=localStorage.getItem(KEY);if(raw){DB=upgrade(JSON.parse(raw));}
+    else{const old=localStorage.getItem(KEY_V1);if(old){DB=upgrade(JSON.parse(old));if(DB)localStorage.setItem(KEY,JSON.stringify(DB));}}
+  }catch(e){DB=null;}
+  if(!DB)DB=sampleDB();
+  if(!DB.hospitals.length)DB.hospitals.push(freshHospital(DB.nextId++));
+  setCurrent(DB.currentId);
 }
-function save(){ try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){toast('Could not save. This browser is blocking storage.');} }
+function save(){ try{localStorage.setItem(KEY,JSON.stringify(DB));}catch(e){toast('Could not save. This browser is blocking storage.');} }
 function log(text){S.activity.unshift({ts:new Date().toISOString().slice(0,16).replace('T',' '),text}); S.activity=S.activity.slice(0,30);}
 function commit(msg){ if(msg) log(msg); save(); }
-const nid=()=>S.nextId++;
+const nid=()=>DB.nextId++;
+const digitsOf=(v)=>String(v||'').replace(/\D/g,'');
+const idLine=(h)=>[h.ptan&&`PTAN ${h.ptan}`,h.ccn&&h.ccn!==h.ptan&&`CCN ${h.ccn}`,h.npi&&`NPI ${h.npi}`,h.tin&&`TIN ${h.tin}`,h.state].filter(Boolean).join(' · ');
+// Filter hospitals by PTAN, NPI, TIN, CCN, city, or name. Digits match with or without dashes.
+function matchHospitals(q){
+  const t=(q||'').trim().toLowerCase();if(!t)return DB.hospitals;const d=digitsOf(t);
+  return DB.hospitals.filter(({hospital:h})=>h.name.toLowerCase().includes(t)||h.city.toLowerCase().includes(t)||h.ccn.toLowerCase().includes(t)||h.ptan.toLowerCase().includes(t)||(d&&[h.npi,h.tin,h.ccn,h.ptan].some(v=>digitsOf(v).includes(d))));
+}
 
 // ---------- helpers ----------
 const esc=(s)=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -373,13 +422,18 @@ function download(name,text,type){
 }
 
 // ---------- routing and render ----------
-const PAGES=[['dashboard','Dashboard'],['readiness','Readiness'],['narrative','Narrative'],['budget','Budget'],['compliance','Compliance'],['documents','Documents'],['program','Program'],['profile','Profile']];
-const ui={page:'dashboard',phase:'application',hideDone:false,narTab:'intake',section:'need',compTab:'reports',progTab:'overview',stateCode:'',editBudget:null,showAdd:{}};
+const PAGES=[['dashboard','Dashboard'],['readiness','Readiness'],['narrative','Narrative'],['budget','Budget'],['compliance','Compliance'],['documents','Documents'],['program','Program'],['profile','Profile'],['hospitals','Hospitals']];
+const ui={page:'dashboard',switchQ:'',switchOpen:false,hospQ:'',phase:'application',hideDone:false,narTab:'intake',section:'need',compTab:'reports',progTab:'overview',stateCode:'',editBudget:null,showAdd:{}};
 function go(p){ui.page=p;render();window.scrollTo({top:0});}
-function render(){renderNav();const m=document.getElementById('main');m.innerHTML=({dashboard:Dashboard,readiness:Readiness,narrative:Narrative,budget:Budget,compliance:Compliance,documents:Documents,program:Program,profile:Profile})[ui.page]();}
+function render(){renderNav();const m=document.getElementById('main');m.innerHTML=({dashboard:Dashboard,readiness:Readiness,narrative:Narrative,budget:Budget,compliance:Compliance,documents:Documents,program:Program,profile:Profile,hospitals:Hospitals})[ui.page]();}
 function renderNav(){
   const app=phaseStats('application');
-  document.getElementById('nav').innerHTML=`<div class="brand"><strong>RHTP Navigator</strong><span>Rural Health Transformation Program</span></div>`+
+  const hits=matchHospitals(ui.switchQ);
+  document.getElementById('nav').innerHTML=`<div class="brand"><strong>RHTP Navigator</strong><span>Rural Health Transformation Program</span></div>
+    <div class="switcher"><span class="current">Working on<strong>${esc(S.hospital.name||'Unnamed hospital')}</strong></span>
+      <input id="hospital-search" placeholder="${DB.hospitals.length>1?'Switch by PTAN, NPI, TIN, or name':'PTAN, NPI, TIN, or name'}" value="${esc(ui.switchQ)}" autocomplete="off" aria-label="Find a hospital by PTAN, NPI, TIN, CCN, or name">
+      ${ui.switchOpen?`<div class="results">${hits.map(h=>`<button data-switch="${h.id}" class="${h.id===S.id?'on':''}">${esc(h.hospital.name||'Unnamed hospital')}<div class="ids">${esc(idLine(h.hospital)||'No identifiers yet')}</div></button>`).join('')}${hits.length?'':`<div class="empty">No saved hospital matches "${esc(ui.switchQ)}".</div>`}<a href="#" data-go="hospitals" class="add">Add a hospital</a></div>`:''}
+    </div>`+
     PAGES.map(([k,l])=>`<button data-go="${k}" class="${ui.page===k?'on':''}">${l}${k==='readiness'?`<span class="count">${app.complete}/${app.total}</span>`:''}</button>`).join('')+
     `<div class="foot"><span>Data is saved in this browser only. Export a backup from Profile.</span><span>Reference content is a starting point. Confirm requirements with your state lead agency and the CMS NOFO.</span></div>`;
 }
@@ -392,7 +446,7 @@ function progress(v,m,green){const pct=m?Math.round(v/m*100):0;return `<div clas
 function Dashboard(){
   const h=S.hospital,app=phaseStats('application'),bs=budgetSummary(),ls=ledgerSummary(),t=today();
   const alerts=[];
-  if(S.sample)alerts.push(['info','You are looking at sample data. Go to Profile to enter your hospital, or use Reset there to start clean.']);
+  if(S.sample)alerts.push(['info','You are looking at sample data. Go to Profile to enter your hospital, or use Reset there to start clean. Two sample hospitals are loaded so you can try the switcher in the sidebar.']);
   if(h.sam_expiration){const d=daysUntil(h.sam_expiration);if(d!==null&&d<60)alerts.push([d<0?'danger':'warn',`SAM.gov registration ${d<0?'expired':'expires'} ${fmtDate(h.sam_expiration)}. Renew now; it takes weeks.`]);}
   const overdue=S.checklist.filter(c=>c.due_date&&c.due_date<t&&!['complete','na'].includes(c.status));
   if(overdue.length)alerts.push(['warn',`${overdue.length} checklist item${overdue.length>1?'s are':' is'} past due.`]);
@@ -424,7 +478,7 @@ function Profile(){
   const h=S.hospital;const tx=(k,type='text')=>`<input id="h_${k}" type="${type}" data-h="${k}" value="${esc(h[k])}">`;const nm=(k,step=1)=>`<input id="h_${k}" type="number" min="0" step="${step}" data-h="${k}" value="${esc(h[k]||0)}">`;
   return head('Hospital profile','Facility, contacts, registrations, and award details. Everything else in the app reads from here. Changes save as you type.',
       `<button class="btn" data-act="export-json">Export backup (.json)</button><label class="btn" for="import-json">Import backup</label><input id="import-json" type="file" accept=".json" hidden><button class="btn danger" data-act="reset">Reset all data</button>`)+
-    `<div class="card"><h2>Facility</h2><div class="form" style="margin-top:10px">${field('Hospital name',tx('name'),'',true)}${field('CCN',tx('ccn'),'Medicare provider number')}${field('Facility type',`<select id="h_facility_type" data-h="facility_type">${opts(FACILITY,h.facility_type)}</select>`)}${field('State',`<select id="h_state" data-h="state"><option value="">Select</option>${opts(STATES,h.state)}</select>`)}${field('County',tx('county'))}${field('Licensed beds',nm('licensed_beds'))}${field('Service area population',nm('service_area_population'))}${field('Fiscal year end',tx('fiscal_year_end'),'MM-DD')}</div></div>
+    `<div class="card"><h2>Facility</h2><div class="form" style="margin-top:10px">${field('Hospital name',tx('name'),'',true)}${field('CCN',tx('ccn'),'Medicare provider number')}${field('PTAN',tx('ptan'),'Usually the same 6 digits as the CCN')}${field('NPI',tx('npi'),'10 digits')}${field('TIN',tx('tin'),'EIN')}${field('Facility type',`<select id="h_facility_type" data-h="facility_type">${opts(FACILITY,h.facility_type)}</select>`)}${field('State',`<select id="h_state" data-h="state"><option value="">Select</option>${opts(STATES,h.state)}</select>`)}${field('Address',tx('address'))}${field('City',tx('city'))}${field('ZIP',tx('zip'))}${field('County',tx('county'))}${field('Licensed beds',nm('licensed_beds'))}${field('Service area population',nm('service_area_population'))}${field('Fiscal year end',tx('fiscal_year_end'),'MM-DD')}</div></div>
     <div class="card"><h2>Primary contact</h2><div class="form" style="margin-top:10px">${field('Name',tx('contact_name'))}${field('Title',tx('contact_title'))}${field('Email',tx('contact_email','email'))}${field('Phone',tx('contact_phone'))}</div></div>
     <div class="card"><h2>Registrations</h2><div class="form" style="margin-top:10px">${field('UEI',tx('uei'),'Unique Entity ID from SAM.gov')}${field('SAM.gov registration expires',tx('sam_expiration','date'))}</div></div>
     <div class="card"><h2>Funding request and award</h2><div class="form" style="margin-top:10px">${field('Amount requested',nm('requested_amount',1000))}${field('Amount awarded',nm('awarded_amount',1000),'Leave 0 until you have an award letter')}${field('Award date',tx('award_date','date'))}${field('Project start',tx('project_start','date'))}${field('Project end',tx('project_end','date'))}${field('Notes',`<textarea id="h_notes" data-h="notes">${esc(h.notes)}</textarea>`,'',true)}</div></div>`;
@@ -536,19 +590,47 @@ function Program(){
     :StatePanel());
 }
 function StatePanel(){
-  const code=ui.stateCode||S.hospital.state;const st=S.states[code];const name=(STATES.find(s=>s[0]===code)||[])[1];
-  const known=STATES.filter(([a])=>S.states[a].fy2026_award);
+  const code=ui.stateCode||S.hospital.state;const st=DB.states[code];const name=(STATES.find(s=>s[0]===code)||[])[1];
+  const known=STATES.filter(([a])=>DB.states[a].fy2026_award);
   return `<div class="card"><div class="form">${field('State',`<select id="state-pick" data-act="pick-state"><option value="">Select</option>${opts(STATES,code)}</select>`)}</div>
     ${st?`<div style="margin-top:12px"><h2>${esc(name)}</h2><div class="form" style="margin-top:10px">${field('FY2026 award',`<input id="s_award" type="number" step="1000" data-s="fy2026_award" value="${st.fy2026_award??''}">`,'From the CMS award announcement')}${field('Verified against CMS',`<select id="s_ver" data-s="award_verified"><option value="0"${!st.award_verified?' selected':''}>Not verified</option><option value="1"${st.award_verified?' selected':''}>Verified</option></select>`)}${field('Lead agency',`<input id="s_agency" data-s="lead_agency" value="${esc(st.lead_agency)}" placeholder="State Medicaid agency, health department, office of rural health">`)}${field('Program contact email',`<input id="s_email" data-s="contact_email" value="${esc(st.contact_email)}">`)}${field('Program page',`<input id="s_url" data-s="program_url" value="${esc(st.program_url)}" placeholder="https://">`,'',true)}${field('Provider application opens',`<input id="s_open" type="date" data-s="provider_application_open" value="${esc(st.provider_application_open)}">`)}${field('Provider application due',`<input id="s_due" type="date" data-s="provider_application_due" value="${esc(st.provider_application_due)}">`)}${field('Notes',`<textarea id="s_notes" data-s="notes">${esc(st.notes)}</textarea>`,'Caps the state passes down, match requirements, portal quirks, TA sessions',true)}</div>
     <div class="actions" style="margin-top:10px">${st.program_url?`<a class="btn" href="${esc(st.program_url)}" target="_blank" rel="noreferrer">Open program page</a>`:''}${st.provider_application_due?`<span class="small muted">Due ${fmtDate(st.provider_application_due)}</span>`:''}<span class="small muted">Saves as you type</span></div></div>`:''}</div>
-    <div class="card"><h3>Awards entered so far</h3><p class="small muted" style="margin-top:4px">Only figures confirmed in public reporting were pre-filled (Texas and New Jersey, the high and low). Enter the rest from the CMS award list as you confirm them.</p><table style="margin-top:8px"><tbody>${known.map(([a,n])=>`<tr><td>${esc(n)}</td><td class="num">${money(S.states[a].fy2026_award)}</td><td>${badge(S.states[a].award_verified?'Verified':'Unverified',S.states[a].award_verified?'green':'amber')}</td></tr>`).join('')}</tbody></table></div>`;
+    <div class="card"><h3>Awards entered so far</h3><p class="small muted" style="margin-top:4px">Only figures confirmed in public reporting were pre-filled (Texas and New Jersey, the high and low). Enter the rest from the CMS award list as you confirm them.</p><table style="margin-top:8px"><tbody>${known.map(([a,n])=>`<tr><td>${esc(n)}</td><td class="num">${money(DB.states[a].fy2026_award)}</td><td>${badge(DB.states[a].award_verified?'Verified':'Unverified',DB.states[a].award_verified?'green':'amber')}</td></tr>`).join('')}</tbody></table></div>`;
+}
+
+function Hospitals(){
+  const hits=matchHospitals(ui.hospQ);
+  return head('Hospitals','Every hospital tracked here, with its PTAN, NPI, TIN, and CCN. Type any of them to filter the list, then open one to switch every tab to it.')+
+    `<div class="card"><div class="form"><label class="field span2"><span>PTAN, NPI, TIN, CCN, or name <span class="help">Filters saved hospitals as you type. Dashes in a TIN do not matter.</span></span><input id="hosp-filter" data-act="hosp-filter" value="${esc(ui.hospQ)}" placeholder="1234567893 or 011234 or 63-0000000 or Sample Valley" autocomplete="off"></label></div>
+    <div class="alert info" style="margin-top:12px">This shared page cannot reach CMS to look a hospital up by NPI or CCN. Enter identifiers by hand here, or use the full app, which searches the NPPES registry and Care Compare and prefills the record.</div></div>
+    <div class="card wrap"><table><thead><tr><th>Hospital</th><th>PTAN</th><th>CCN</th><th>NPI</th><th>TIN</th><th>State</th><th>Type</th><th></th></tr></thead><tbody>
+      ${hits.length?hits.map(h=>`<tr data-id="${h.id}"><td><strong>${esc(h.hospital.name||'Unnamed hospital')}</strong> ${h.id===S.id?badge('Open','blue'):''}<div class="small muted">${esc([h.hospital.city,h.hospital.county&&h.hospital.county+' County'].filter(Boolean).join(', '))}</div></td><td class="ids">${esc(h.hospital.ptan)}</td><td class="ids">${esc(h.hospital.ccn)}</td><td class="ids">${esc(h.hospital.npi)}</td><td class="ids">${esc(h.hospital.tin)}</td><td>${esc(h.hospital.state)}</td><td>${esc(h.hospital.facility_type)}</td><td style="white-space:nowrap"><button class="btn sm" data-hosp="open">Open</button> <button class="btn sm danger" data-hosp="delete">✕</button></td></tr>`).join(''):`<tr><td colspan="8" class="muted">No saved hospital matches "${esc(ui.hospQ)}".</td></tr>`}
+    </tbody></table></div>
+    <form class="card" data-form="hospital"><h2>Add a hospital</h2><p class="muted small">PTAN and TIN are not published by CMS. For hospitals the PTAN is usually the same six digits as the CCN.</p><div class="form" style="margin-top:10px">
+      ${field('Hospital name','<input name="name" id="nh_name" required>','',true)}
+      ${field('PTAN','<input name="ptan" id="nh_ptan">','Usually the same 6 digits as the CCN')}
+      ${field('CCN','<input name="ccn" id="nh_ccn">')}
+      ${field('NPI','<input name="npi" id="nh_npi" maxlength="10" inputmode="numeric">','10 digits')}
+      ${field('TIN','<input name="tin" id="nh_tin" placeholder="12-3456789">','EIN, 9 digits')}
+      ${field('Facility type',`<select name="facility_type" id="nh_type">${opts(FACILITY,'CAH')}</select>`)}
+      ${field('State',`<select name="state" id="nh_state"><option value="">Select</option>${opts(STATES,'')}</select>`)}
+      ${field('City','<input name="city" id="nh_city">')}
+      ${field('County','<input name="county" id="nh_county">')}
+    </div><div class="actions" style="margin-top:10px"><button class="btn primary">Add hospital</button></div></form>
+    <p class="muted small">Switching hospitals changes every tab: checklist, narrative, budget, compliance, and documents.</p>`;
 }
 
 // ---------- events ----------
 const formData=(f)=>Object.fromEntries(new FormData(f).entries());
 document.addEventListener('click',(e)=>{
-  const el=e.target.closest('[data-go],[data-phase],[data-nar],[data-sec],[data-comp],[data-prog],[data-act],[data-c],[data-b],[data-r],[data-m],[data-l],[data-d]');if(!el)return;
-  if(el.dataset.go){e.preventDefault();go(el.dataset.go);return;}
+  if(!e.target.closest('.switcher')&&ui.switchOpen){ui.switchOpen=false;renderNav();}
+  const el=e.target.closest('[data-go],[data-switch],[data-hosp],[data-phase],[data-nar],[data-sec],[data-comp],[data-prog],[data-act],[data-c],[data-b],[data-r],[data-m],[data-l],[data-d]');if(!el)return;
+  if(el.dataset.go){e.preventDefault();ui.switchOpen=false;go(el.dataset.go);return;}
+  if(el.dataset.switch){setCurrent(Number(el.dataset.switch));ui.switchQ='';ui.switchOpen=false;save();go('dashboard');return;}
+  if(el.dataset.hosp){const id=Number(el.closest('[data-id]').dataset.id);const h=DB.hospitals.find(x=>x.id===id);if(!h)return;
+    if(el.dataset.hosp==='open'){setCurrent(id);save();go('dashboard');return;}
+    if(el.dataset.hosp==='delete'){if(!confirm(`Delete ${h.hospital.name||'this hospital'} and everything tracked for it? This cannot be undone.`))return;DB.hospitals=DB.hospitals.filter(x=>x.id!==id);if(!DB.hospitals.length)DB.hospitals.push(freshHospital(nid()));setCurrent(DB.currentId);save();render();toast('Deleted');return;}
+  }
   if(el.dataset.phase){ui.phase=el.dataset.phase;render();return;}
   if(el.dataset.nar){ui.narTab=el.dataset.nar;render();return;}
   if(el.dataset.sec){ui.section=el.dataset.sec;render();return;}
@@ -567,8 +649,8 @@ document.addEventListener('click',(e)=>{
   else if(act==='cancel-edit'){ui.editBudget=null;render();}
   else if(act==='export-md')exportPacket();
   else if(act==='export-csv')exportCsv();
-  else if(act==='export-json')download(`rhtp-backup-${today()}.json`,JSON.stringify(S,null,2),'application/json');
-  else if(act==='reset'){if(confirm('Erase everything in this browser and start with a blank hospital? Export a backup first if you need one.')){S=freshState();commit('Reset');go('profile');}}
+  else if(act==='export-json')download(`rhtp-backup-${today()}.json`,JSON.stringify(DB,null,2),'application/json');
+  else if(act==='reset'){if(confirm('Erase every hospital in this browser and start with one blank hospital? Export a backup first if you need one.')){DB=freshDB();setCurrent(1);commit('Reset');go('profile');}}
   else if(act==='gen-one'){const sec=S.sections[ui.section];if(sec.content.trim()&&!confirm('Replace the current text with a fresh draft?'))return;sec.content=draftSection(ui.section);if(sec.status==='empty')sec.status='draft';const ph=(sec.content.match(/\[[^\]]+\]/g)||[]).length;commit(`Drafted ${SECTIONS.find(s=>s[0]===ui.section)[1]}`);render();toast(ph?`Draft generated with ${ph} placeholder${ph>1?'s':''} to fill`:'Draft generated');}
   else if(act==='gen-all'){if(!confirm('Generate drafts for every section that is still empty?'))return;let n=0;for(const [k] of SECTIONS){if(!S.sections[k].content.trim()){S.sections[k].content=draftSection(k);S.sections[k].status='draft';n++;}}commit(`Drafted ${n} sections`);render();toast(`${n} draft${n===1?'':'s'} generated`);}
   else if(act==='save-section'){S.sections[ui.section].content=document.getElementById('sec_'+ui.section).value;if(S.sections[ui.section].status==='empty'&&S.sections[ui.section].content.trim())S.sections[ui.section].status='draft';commit(`Saved ${SECTIONS.find(s=>s[0]===ui.section)[1]}`);render();toast('Saved');}
@@ -581,20 +663,24 @@ document.addEventListener('submit',(e)=>{
   else if(kind==='report'){S.reports.push({id:nid(),title:d.title,report_type:d.report_type,period_start:d.period_start||'',period_end:d.period_end||'',due_date:d.due_date,status:'upcoming',submitted_at:'',submitted_by:'',evidence_link:'',notes:d.notes||''});ui.showAdd.report=false;commit(`Added report: ${d.title}`);}
   else if(kind==='ms'){S.milestones.push({id:nid(),title:d.title,description:d.description||'',category_code:d.category_code||'',owner:d.owner||'',due_date:d.due_date||'',status:'planned',metric:d.metric||'',target_value:d.target_value||'',actual_value:''});ui.showAdd.ms=false;commit(`Added milestone: ${d.title}`);}
   else if(kind==='ledger'){S.ledger.push({id:nid(),entry_date:d.entry_date,direction:d.direction,amount:Number(d.amount),category_code:d.direction==='drawdown'?'':d.category_code,cost_type:d.cost_type,description:d.description||'',vendor:d.vendor||'',invoice_ref:d.invoice_ref||'',doc_link:d.doc_link||''});commit(`Recorded ${d.direction} of ${money(d.amount)}`);}
+  else if(kind==='hospital'){const h=freshHospital(nid());Object.assign(h.hospital,{name:d.name,ptan:d.ptan||'',ccn:d.ccn||'',npi:digitsOf(d.npi),tin:d.tin||'',facility_type:d.facility_type||'CAH',state:d.state||'',city:d.city||'',county:d.county||''});DB.hospitals.push(h);save();toast(`Added ${d.name}`);render();return;}
   else if(kind==='doc'){S.documents.push({id:nid(),title:d.title,doc_type:d.doc_type,external_link:d.external_link,notes:d.notes||'',created_at:today()});commit(`Added document: ${d.title}`);}
   render();toast('Saved');
 });
 let saveT;const debounced=(fn)=>{clearTimeout(saveT);saveT=setTimeout(fn,500);};
 document.addEventListener('input',(e)=>{
   const el=e.target;
+  if(el.id==='hospital-search'){ui.switchQ=el.value;ui.switchOpen=true;const box=el.closest('.switcher');const hits=matchHospitals(ui.switchQ);let r=box.querySelector('.results');if(!r){r=document.createElement('div');r.className='results';box.appendChild(r);}
+    r.innerHTML=hits.map(h=>`<button data-switch="${h.id}" class="${h.id===S.id?'on':''}">${esc(h.hospital.name||'Unnamed hospital')}<div class="ids">${esc(idLine(h.hospital)||'No identifiers yet')}</div></button>`).join('')+(hits.length?'':`<div class="empty">No saved hospital matches "${esc(ui.switchQ)}".</div>`)+`<a href="#" data-go="hospitals" class="add">Add a hospital</a>`;return;}
+  if(el.dataset.act==='hosp-filter'){ui.hospQ=el.value;const rows=document.querySelectorAll('tr[data-id]');const keep=new Set(matchHospitals(ui.hospQ).map(h=>h.id));rows.forEach(tr=>{tr.hidden=!keep.has(Number(tr.dataset.id));});return;}
   if(el.dataset.h!==undefined){const k=el.dataset.h;S.hospital[k]=el.type==='number'?Number(el.value||0):el.value;S.sample=false;debounced(()=>{save();renderNav();});return;}
   if(el.dataset.q!==undefined){S.answers[el.dataset.q]=el.value;debounced(save);return;}
-  if(el.dataset.s!==undefined){const code=ui.stateCode||S.hospital.state;const st=S.states[code];if(!st)return;const k=el.dataset.s;st[k]=k==='fy2026_award'?(el.value===''?null:Number(el.value)):k==='award_verified'?Number(el.value):el.value;debounced(save);return;}
+  if(el.dataset.s!==undefined){const code=ui.stateCode||S.hospital.state;const st=DB.states[code];if(!st)return;const k=el.dataset.s;st[k]=k==='fy2026_award'?(el.value===''?null:Number(el.value)):k==='award_verified'?Number(el.value):el.value;debounced(save);return;}
   if(el.id&&el.id.startsWith('sec_')){const wc=words(el.value),lim=S.sections[ui.section].word_limit,ph=(el.value.match(/\[[^\]]+\]/g)||[]).length;const w=document.getElementById('wc');w.textContent=`${wc} / ${lim} words${ph?` · ${ph} placeholder${ph>1?'s':''} in brackets`:''}`;w.className=`small ${wc>lim?'ph':'muted'}`;}
 });
 document.addEventListener('change',(e)=>{
   const el=e.target;const id=Number(el.closest('[data-id]')?.dataset.id);
-  if(el.id==='import-json'){const f=el.files[0];if(!f)return;f.text().then(t=>{try{const obj=JSON.parse(t);if(!obj.hospital||!obj.checklist)throw 0;S=obj;S.sample=false;save();render();toast('Backup imported');}catch{toast('That file is not an RHTP Navigator backup');}});return;}
+  if(el.id==='import-json'){const f=el.files[0];if(!f)return;f.text().then(t=>{try{const obj=upgrade(JSON.parse(t));if(!obj)throw 0;DB=obj;DB.hospitals.forEach(h=>h.sample=false);setCurrent(DB.currentId);save();render();toast('Backup imported');}catch{toast('That file is not an RHTP Navigator backup');}});return;}
   if(el.dataset.act==='hide-done'){ui.hideDone=el.checked;render();return;}
   if(el.dataset.act==='pick-state'){ui.stateCode=el.value;render();return;}
   if(el.dataset.act==='sec-status'){S.sections[ui.section].status=el.value;commit();render();return;}
@@ -604,5 +690,6 @@ document.addEventListener('change',(e)=>{
   if(el.dataset.m){const m=S.milestones.find(x=>x.id===id);if(!m)return;m[el.dataset.m]=el.value;if(el.dataset.m==='status'){commit(`${label(el.value)}: ${m.title}`);render();}else save();return;}
 });
 
+document.addEventListener('focusin',(e)=>{if(e.target.id==='hospital-search'&&!ui.switchOpen){ui.switchOpen=true;renderNav();document.getElementById('hospital-search').focus();}});
 load();render();
 </script>
